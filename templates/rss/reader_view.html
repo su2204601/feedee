@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+
+{% block title %}{{ article.title|truncatewords:8 }} – Feedee{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto px-4 md:px-8 py-6">
+    {# ── Toolbar ────────────────────────────────────── #}
+    <div class="flex items-center justify-between gap-3 mb-5">
+        <a href="{% if article.feed %}{% url 'feed-articles' article.feed.id %}{% else %}{% url 'rss-dashboard' %}{% endif %}"
+           class="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-brand-600 transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M15 19l-7-7 7-7"/></svg>
+            Back to {{ article.feed.name|default:"articles" }}
+        </a>
+        <div class="flex items-center gap-1.5">
+            {# ── Favorite ── #}
+            <form method="post" action="{% url 'article-state-toggle' article.id 'is_favorite' %}">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.path }}">
+                <button title="{% if is_favorite %}Remove favorite{% else %}Add favorite{% endif %}"
+                        class="p-2 rounded-lg transition-colors {% if is_favorite %}text-amber-500 bg-amber-50 hover:bg-amber-100{% else %}text-gray-400 hover:text-amber-500 hover:bg-gray-100{% endif %}">
+                    <svg class="w-4 h-4" fill="{% if is_favorite %}currentColor{% else %}none{% endif %}" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M11.05 3.612c.35-.86 1.55-.86 1.9 0l2.07 5.07 5.45.46c.94.08 1.32 1.24.6 1.86l-4.13 3.56 1.26 5.32c.22.92-.78 1.64-1.6 1.16L12 18.26l-4.53 2.76c-.82.48-1.82-.24-1.6-1.16l1.26-5.32-4.13-3.56c-.72-.62-.34-1.78.6-1.86l5.45-.46 2.07-5.07z"/></svg>
+                </button>
+            </form>
+            {# ── Read Later ── #}
+            <form method="post" action="{% url 'article-state-toggle' article.id 'is_read_later' %}">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.path }}">
+                <button title="{% if is_read_later %}Remove read later{% else %}Read later{% endif %}"
+                        class="p-2 rounded-lg transition-colors {% if is_read_later %}text-sky-500 bg-sky-50 hover:bg-sky-100{% else %}text-gray-400 hover:text-sky-500 hover:bg-gray-100{% endif %}">
+                    <svg class="w-4 h-4" fill="{% if is_read_later %}currentColor{% else %}none{% endif %}" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/></svg>
+                </button>
+            </form>
+            {# ── Mark Read / Unread ── #}
+            <form method="post" action="{% url 'article-state-toggle' article.id 'is_read' %}">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.path }}">
+                <button title="{% if is_read %}Mark unread{% else %}Mark read{% endif %}"
+                        class="p-2 rounded-lg transition-colors {% if is_read %}text-emerald-500 bg-emerald-50 hover:bg-emerald-100{% else %}text-gray-400 hover:text-emerald-500 hover:bg-gray-100{% endif %}">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M5 13l4 4L19 7"/></svg>
+                </button>
+            </form>
+            <span class="w-px h-5 bg-gray-200 mx-1"></span>
+            {# ── Open Original ── #}
+            <a href="{{ article.link }}" target="_blank" rel="noopener noreferrer"
+               title="Open original"
+               class="p-2 rounded-lg text-gray-400 hover:text-brand-600 hover:bg-gray-100 transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3"/></svg>
+            </a>
+        </div>
+    </div>
+
+    {# ── Article ────────────────────────────────────── #}
+    <article class="rounded-xl bg-white border border-gray-200 shadow-soft overflow-hidden">
+        <header class="px-6 md:px-10 pt-8 pb-6 border-b border-gray-100">
+            <div class="flex items-center gap-2 text-xs text-gray-400 mb-3">
+                <span class="font-medium text-gray-500">{{ article.feed.name|default:"Unknown feed" }}</span>
+                <span>&middot;</span>
+                <time>{{ article.published_at|default:article.created_at|timesince }} ago</time>
+            </div>
+            <h1 class="text-2xl md:text-3xl font-bold text-gray-900 leading-tight">{{ article.title }}</h1>
+        </header>
+
+        <div class="px-6 md:px-10 py-8">
+            {% if article.content %}
+                <div class="article-prose max-w-none">
+                    {{ article.content|safe }}
+                </div>
+            {% elif article.summary %}
+                <div class="article-prose max-w-none">
+                    <p>{{ article.summary }}</p>
+                </div>
+            {% else %}
+                <div class="rounded-xl border-2 border-dashed border-gray-200 bg-gray-50/50 p-8 text-center">
+                    <svg class="w-10 h-10 mx-auto text-gray-300" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3"/></svg>
+                    <p class="mt-3 text-sm font-medium text-gray-500">No reader-friendly content available</p>
+                    <a href="{{ article.link }}" target="_blank" rel="noopener noreferrer"
+                       class="mt-2 inline-block text-sm text-brand-600 hover:text-brand-700 font-medium">
+                        Open the original article &rarr;
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+
+        {# ── Footer ─────────────────────────────────── #}
+        <footer class="px-6 md:px-10 py-4 bg-gray-50 border-t border-gray-100 flex items-center justify-between text-xs text-gray-400">
+            <a href="{{ article.link }}" target="_blank" rel="noopener noreferrer" class="hover:text-brand-600 transition-colors truncate max-w-[70%]">
+                {{ article.link }}
+            </a>
+            <div class="flex items-center gap-3 flex-shrink-0">
+                {% if prev_article %}
+                    <a href="{% url 'article-reader' prev_article.id %}" class="hover:text-brand-600 transition-colors" title="Previous article">&larr; Prev</a>
+                {% endif %}
+                {% if next_article %}
+                    <a href="{% url 'article-reader' next_article.id %}" class="hover:text-brand-600 transition-colors" title="Next article">Next &rarr;</a>
+                {% endif %}
+            </div>
+        </footer>
+    </article>
+</div>
+
+{# ── Keyboard shortcuts ─────────────────────────────── #}
+<script>
+document.addEventListener('keydown', function(e) {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    {% if prev_article %}if (e.key === 'k' || e.key === 'ArrowLeft') window.location.href = "{% url 'article-reader' prev_article.id %}";{% endif %}
+    {% if next_article %}if (e.key === 'j' || e.key === 'ArrowRight') window.location.href = "{% url 'article-reader' next_article.id %}";{% endif %}
+    if (e.key === 'o') window.open("{{ article.link }}", '_blank');
+    if (e.key === 'u' || e.key === 'Escape') window.location.href = "{% if article.feed %}{% url 'feed-articles' article.feed.id %}{% else %}{% url 'rss-dashboard' %}{% endif %}";
+});
+</script>
+{% endblock %}

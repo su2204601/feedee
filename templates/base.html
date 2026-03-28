@@ -1,0 +1,174 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Feedee{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=IBM+Plex+Sans+JP:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="{% static 'css/article-prose.css' %}">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'IBM Plex Sans JP', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50:  '#eff6ff',
+                            100: '#dbeafe',
+                            200: '#bfdbfe',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                        }
+                    },
+                    boxShadow: {
+                        soft: '0 1px 3px 0 rgba(0,0,0,.08), 0 1px 2px -1px rgba(0,0,0,.08)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        html, body { height: 100%; overflow-x: hidden; }
+        .sidebar-link { transition: background .12s, color .12s; }
+        .sidebar-link:hover { background: rgba(59,130,246,.06); }
+        .sidebar-link.active { background: rgba(59,130,246,.10); color: #1d4ed8; font-weight: 600; }
+        @media (max-width: 767px) {
+            #sidebar-panel  { transform: translateX(-100%); transition: transform .2s; }
+            #sidebar-panel.open { transform: translateX(0); }
+            #sidebar-overlay { transition: opacity .2s; }
+            #sidebar-overlay.open { opacity: 1; pointer-events: auto; }
+        }
+    </style>
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="h-full bg-gray-50 text-gray-900 font-sans antialiased">
+
+{# ── Top Navigation Bar ─────────────────────────────── #}
+<header class="fixed top-0 inset-x-0 z-50 h-14 bg-white border-b border-gray-200 shadow-soft flex items-center px-4 md:px-6 gap-4">
+    <button id="sidebar-toggle" class="md:hidden -ml-1 p-1.5 rounded-lg hover:bg-gray-100 text-gray-600">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
+    </button>
+
+    <a href="{% url 'rss-dashboard' %}" class="flex items-center gap-2 flex-shrink-0 group">
+        <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow">
+            <span class="text-white font-bold text-xs leading-none">F</span>
+        </div>
+        <span class="font-semibold text-gray-900 text-sm hidden sm:inline">Feedee</span>
+    </a>
+
+    <form method="get" action="{% url 'rss-dashboard' %}" class="hidden sm:block flex-1 max-w-md">
+        <div class="relative">
+            <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M21 21l-5.2-5.2M17 10a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+            <input type="text" name="q" value="{{ query|default:'' }}" placeholder="Search articles…"
+                   class="w-full pl-9 pr-3 py-1.5 rounded-lg border border-gray-200 bg-gray-50 text-sm placeholder-gray-400 focus:bg-white focus:border-brand-500 focus:ring-2 focus:ring-brand-100 focus:outline-none transition-colors">
+        </div>
+    </form>
+
+    <div class="flex-1"></div>
+
+    <div class="flex items-center gap-2 flex-shrink-0 text-sm">
+        {% if request.user.is_authenticated %}
+            <span class="hidden sm:inline text-gray-500">{{ request.user.username }}</span>
+            <div class="w-7 h-7 rounded-full bg-brand-100 flex items-center justify-center">
+                <span class="text-xs font-semibold text-brand-700">{{ request.user.username|first|upper }}</span>
+            </div>
+        {% else %}
+            <a href="{% url 'admin:index' %}" class="text-xs font-medium text-brand-600 hover:text-brand-700">Sign in</a>
+        {% endif %}
+    </div>
+</header>
+
+{# ── Sidebar Overlay (mobile) ───────────────────────── #}
+<div id="sidebar-overlay" class="fixed inset-0 z-40 bg-black/30 opacity-0 pointer-events-none md:hidden" aria-hidden="true"></div>
+
+{# ── Sidebar ────────────────────────────────────────── #}
+<aside id="sidebar-panel" class="fixed top-14 bottom-0 left-0 z-40 w-64 bg-white border-r border-gray-200 flex flex-col md:translate-x-0">
+    <nav class="px-3 pt-4 pb-2 space-y-0.5">
+        <a href="{% url 'rss-dashboard' %}"
+           class="sidebar-link flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-gray-700 {% if current_page == 'dashboard' %}active{% endif %}">
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"/></svg>
+            All articles
+            {% if sidebar_total_unread %}<span class="ml-auto text-xs font-medium text-brand-600 bg-brand-50 rounded-full px-2 py-0.5">{{ sidebar_total_unread }}</span>{% endif %}
+        </a>
+        <a href="{% url 'rss-dashboard' %}?state=read-later"
+           class="sidebar-link flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-gray-700">
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/></svg>
+            Read later
+            {% if sidebar_total_read_later %}<span class="ml-auto text-xs font-medium text-sky-600 bg-sky-50 rounded-full px-2 py-0.5">{{ sidebar_total_read_later }}</span>{% endif %}
+        </a>
+        <a href="{% url 'rss-dashboard' %}?state=favorites"
+           class="sidebar-link flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-gray-700">
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M11.05 3.612c.35-.86 1.55-.86 1.9 0l2.07 5.07 5.45.46c.94.08 1.32 1.24.6 1.86l-4.13 3.56 1.26 5.32c.22.92-.78 1.64-1.6 1.16L12 18.26l-4.53 2.76c-.82.48-1.82-.24-1.6-1.16l1.26-5.32-4.13-3.56c-.72-.62-.34-1.78.6-1.86l5.45-.46 2.07-5.07z"/></svg>
+            Favorites
+            {% if sidebar_total_favorites %}<span class="ml-auto text-xs font-medium text-amber-600 bg-amber-50 rounded-full px-2 py-0.5">{{ sidebar_total_favorites }}</span>{% endif %}
+        </a>
+    </nav>
+    <div class="border-t border-gray-100 mx-3"></div>
+    <div class="flex-1 overflow-y-auto px-3 pt-3 pb-2">
+        <p class="px-3 mb-2 text-[11px] font-semibold uppercase tracking-wider text-gray-400">Feeds</p>
+        {% for group in sidebar_groups %}
+            <div class="mb-3">
+                {% if group.name != "Uncategorized" %}
+                    <p class="px-3 mb-1 text-[10px] font-semibold uppercase tracking-wider text-gray-400">{{ group.name }}</p>
+                {% endif %}
+                {% for feed in group.feeds %}
+                    <a href="{% url 'feed-articles' feed.id %}"
+                       class="sidebar-link flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm text-gray-600 {% if current_page == 'feed-articles' and current_feed_id == feed.id %}active{% endif %}">
+                        <span class="w-2 h-2 rounded-full bg-brand-400 flex-shrink-0"></span>
+                        <span class="truncate">{{ feed.name }}</span>
+                        {% if feed.unread_count %}<span class="ml-auto text-[11px] tabular-nums text-gray-400">{{ feed.unread_count }}</span>{% endif %}
+                    </a>
+                {% endfor %}
+            </div>
+        {% empty %}
+            <p class="px-3 text-sm text-gray-400">No feeds yet</p>
+        {% endfor %}
+    </div>
+    <div class="border-t border-gray-100 px-3 py-3">
+        <a href="{% url 'feed-settings' %}"
+           class="sidebar-link flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-gray-500 {% if current_page == 'settings' %}active{% endif %}">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.573-1.066z"/><circle cx="12" cy="12" r="3"/></svg>
+            Feed settings
+        </a>
+    </div>
+</aside>
+
+{# ── Main Content ───────────────────────────────────── #}
+<main class="md:ml-64 pt-14 min-h-screen bg-gray-50">
+    {% if messages %}
+        <div class="px-4 md:px-8 pt-4 space-y-2">
+            {% for message in messages %}
+                <div class="rounded-lg px-4 py-3 text-sm font-medium border
+                    {% if message.tags == 'success' %}bg-emerald-50 border-emerald-200 text-emerald-700
+                    {% elif message.tags == 'error' %}bg-rose-50 border-rose-200 text-rose-700
+                    {% else %}bg-amber-50 border-amber-200 text-amber-700{% endif %}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+    {% block content %}{% endblock %}
+</main>
+
+<script>
+(function() {
+    var toggle  = document.getElementById('sidebar-toggle');
+    var panel   = document.getElementById('sidebar-panel');
+    var overlay = document.getElementById('sidebar-overlay');
+    if (!toggle) return;
+    function open()  { panel.classList.add('open'); overlay.classList.add('open'); }
+    function close() { panel.classList.remove('open'); overlay.classList.remove('open'); }
+    toggle.addEventListener('click', function() { panel.classList.contains('open') ? close() : open(); });
+    overlay.addEventListener('click', close);
+})();
+</script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

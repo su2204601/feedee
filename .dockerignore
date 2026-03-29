@@ -1,0 +1,13 @@
+.venv
+__pycache__
+*.py[oc]
+.git
+.gitignore
+.env
+db.sqlite3
+staticfiles/
+bin/
+*.egg-info
+.idea/
+.vscode/
+README.md

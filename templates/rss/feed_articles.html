@@ -52,12 +52,17 @@
         <a href="{% url 'article-reader' article.id %}"
            class="group block rounded-lg border border-transparent hover:border-gray-200 hover:bg-white hover:shadow-soft p-3 -mx-1 transition-all">
             <div class="flex items-start gap-3">
+                {% if article.image_url %}
+                <div class="flex-shrink-0 hidden sm:block">
+                    <img src="{{ article.image_url }}" alt="" class="w-28 h-20 rounded-lg object-cover bg-gray-100" loading="lazy">
+                </div>
+                {% endif %}
                 <div class="flex-1 min-w-0">
                     <h2 class="text-sm font-medium leading-snug {% if article.is_read %}text-gray-400{% else %}text-gray-900 group-hover:text-brand-700{% endif %} transition-colors">
                         {{ article.title }}
                     </h2>
                     {% if article.summary %}
-                        <p class="mt-1 text-xs text-gray-400 line-clamp-2 leading-relaxed">{{ article.summary|truncatewords:30 }}</p>
+                        <p class="mt-1 text-xs text-gray-400 line-clamp-2 leading-relaxed">{{ article.summary|striptags|truncatewords:30 }}</p>
                     {% endif %}
                     <div class="mt-1.5 flex items-center gap-2 text-[11px] text-gray-400">
                         <span>{{ article.published_at|default:article.created_at|timesince }} ago</span>

@@ -91,6 +91,7 @@
 {# ── Sidebar ────────────────────────────────────────── #}
 <aside id="sidebar-panel" class="fixed top-14 bottom-0 left-0 z-40 w-64 bg-white border-r border-gray-200 flex flex-col md:translate-x-0">
     <nav class="px-3 pt-4 pb-2 space-y-0.5">
+        <p class="px-3 mb-2 text-[11px] font-semibold uppercase tracking-wider text-gray-400">RSS</p>
         <a href="{% url 'rss-dashboard' %}"
            class="sidebar-link flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-gray-700 {% if current_page == 'dashboard' %}active{% endif %}">
             <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"/></svg>
@@ -130,12 +131,34 @@
         {% empty %}
             <p class="px-3 text-sm text-gray-400">No feeds yet</p>
         {% endfor %}
+
+        <div class="border-t border-gray-100 my-3"></div>
+        <p class="px-3 mb-2 text-[11px] font-semibold uppercase tracking-wider text-gray-400">Bookmarks</p>
+        <a href="{% url 'bookmark-list' %}"
+           class="sidebar-link flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-gray-700 {% if current_page == 'bookmarks' and not tag_slug %}active{% endif %}">
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101M10.172 13.828a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+            All bookmarks
+            {% if sidebar_total_bookmarks %}<span class="ml-auto text-xs font-medium text-violet-600 bg-violet-50 rounded-full px-2 py-0.5">{{ sidebar_total_bookmarks }}</span>{% endif %}
+        </a>
+        {% for tag in sidebar_tags %}
+            <a href="{% url 'bookmark-list' %}?tag={{ tag.slug }}"
+               class="sidebar-link flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm text-gray-600 {% if current_page == 'bookmarks' and tag_slug == tag.slug %}active{% endif %}">
+                <span class="w-2 h-2 rounded-full flex-shrink-0" style="background-color: {{ tag.color }}"></span>
+                <span class="truncate">{{ tag.name }}</span>
+                {% if tag.bookmark_count %}<span class="ml-auto text-[11px] tabular-nums text-gray-400">{{ tag.bookmark_count }}</span>{% endif %}
+            </a>
+        {% endfor %}
     </div>
-    <div class="border-t border-gray-100 px-3 py-3">
+    <div class="border-t border-gray-100 px-3 py-3 space-y-0.5">
         <a href="{% url 'feed-settings' %}"
            class="sidebar-link flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-gray-500 {% if current_page == 'settings' %}active{% endif %}">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.573-1.066z"/><circle cx="12" cy="12" r="3"/></svg>
             Feed settings
+        </a>
+        <a href="{% url 'tag-list' %}"
+           class="sidebar-link flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-gray-500 {% if current_page == 'tag-settings' %}active{% endif %}">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M7 7h.01M7 3h5a1.99 1.99 0 011.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z"/></svg>
+            Tag settings
         </a>
     </div>
 </aside>

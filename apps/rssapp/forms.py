@@ -1,6 +1,6 @@
 from django import forms
 
-from .models import Feed
+from .models import Bookmark, Feed, Tag
 
 _INPUT_CLASS = (
     "w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm "
@@ -42,6 +42,63 @@ class FeedUpdateForm(forms.ModelForm):
             "is_active": forms.CheckboxInput(
                 attrs={
                     "class": "h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500",
+                }
+            ),
+        }
+
+
+class TagForm(forms.ModelForm):
+    class Meta:
+        model = Tag
+        fields = ["name", "color"]
+        widgets = {
+            "name": forms.TextInput(
+                attrs={"class": _INPUT_CLASS, "placeholder": "Tag name"}
+            ),
+            "color": forms.TextInput(
+                attrs={
+                    "class": "h-9 w-14 rounded-lg border border-gray-200 cursor-pointer",
+                    "type": "color",
+                }
+            ),
+        }
+
+
+class BookmarkForm(forms.ModelForm):
+    tag_names = forms.CharField(
+        required=False,
+        widget=forms.TextInput(
+            attrs={
+                "class": _INPUT_CLASS,
+                "placeholder": "tag1, tag2, tag3",
+            }
+        ),
+    )
+
+    class Meta:
+        model = Bookmark
+        fields = ["url", "title", "description"]
+        widgets = {
+            "url": forms.URLInput(
+                attrs={
+                    "class": _INPUT_CLASS,
+                    "placeholder": "https://example.com",
+                    "id": "bookmark-url",
+                }
+            ),
+            "title": forms.TextInput(
+                attrs={
+                    "class": _INPUT_CLASS,
+                    "placeholder": "Page title",
+                    "id": "bookmark-title",
+                }
+            ),
+            "description": forms.Textarea(
+                attrs={
+                    "class": _INPUT_CLASS,
+                    "placeholder": "Description (optional)",
+                    "rows": 3,
+                    "id": "bookmark-description",
                 }
             ),
         }

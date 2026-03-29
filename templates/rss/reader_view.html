@@ -46,6 +46,13 @@
                class="p-2 rounded-lg text-gray-400 hover:text-brand-600 hover:bg-gray-100 transition-colors">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3"/></svg>
             </a>
+            {# ── Bookmark ── #}
+            {% if request.user.is_authenticated %}
+            <a href="{% url 'bookmark-from-article' article.id %}" title="Save as bookmark"
+               class="p-2 rounded-lg text-gray-400 hover:text-violet-500 hover:bg-gray-100 transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101M10.172 13.828a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+            </a>
+            {% endif %}
         </div>
     </div>
 
@@ -62,12 +69,22 @@
 
         <div class="px-6 md:px-10 py-8">
             {% if article.content %}
-                <div class="article-prose max-w-none">
+                {% if article.image_url %}
+                <div class="mb-6 -mx-6 md:-mx-10 -mt-8">
+                    <img src="{{ article.image_url }}" alt="" class="w-full max-h-80 object-cover" loading="lazy">
+                </div>
+                {% endif %}
+                <div class="article-prose max-w-none" id="article-body">
                     {{ article.content|safe }}
                 </div>
             {% elif article.summary %}
-                <div class="article-prose max-w-none">
-                    <p>{{ article.summary }}</p>
+                {% if article.image_url %}
+                <div class="mb-6 -mx-6 md:-mx-10 -mt-8">
+                    <img src="{{ article.image_url }}" alt="" class="w-full max-h-80 object-cover" loading="lazy">
+                </div>
+                {% endif %}
+                <div class="article-prose max-w-none" id="article-body">
+                    {{ article.summary|safe }}
                 </div>
             {% else %}
                 <div class="rounded-xl border-2 border-dashed border-gray-200 bg-gray-50/50 p-8 text-center">
@@ -97,6 +114,28 @@
         </footer>
     </article>
 </div>
+
+{# ── Remove duplicate hero image from article body ──── #}
+{% if article.image_url %}
+<script>
+(function() {
+    var heroSrc = "{{ article.image_url|escapejs }}";
+    var body = document.getElementById('article-body');
+    if (!body || !heroSrc) return;
+    var imgs = body.querySelectorAll('img');
+    for (var i = 0; i < imgs.length; i++) {
+        if (imgs[i].src === heroSrc || imgs[i].getAttribute('src') === heroSrc) {
+            var parent = imgs[i].parentNode;
+            imgs[i].remove();
+            if (parent && parent !== body && parent.children.length === 0 && !parent.textContent.trim()) {
+                parent.remove();
+            }
+            break;
+        }
+    }
+})();
+</script>
+{% endif %}
 
 {# ── Keyboard shortcuts ─────────────────────────────── #}
 <script>

@@ -5,6 +5,7 @@ from .views import (
     ArticleUserStateView,
     FeedListView,
     FeedReorderView,
+    FetchMetadataView,
 )
 
 urlpatterns = [
@@ -15,5 +16,8 @@ urlpatterns = [
         "articles/<int:article_id>/state/",
         ArticleUserStateView.as_view(),
         name="article-user-state",
+    ),
+    path(
+        "bookmarks/fetch-metadata/", FetchMetadataView.as_view(), name="fetch-metadata"
     ),
 ]

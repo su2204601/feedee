@@ -1,5 +1,6 @@
 from django.db import models
 from django.conf import settings
+from django.utils.text import slugify
 import bleach
 
 
@@ -65,6 +66,7 @@ class Article(models.Model):
     hash = models.CharField(max_length=64, unique=True)
     summary = models.TextField(blank=True, default="")
     content = models.TextField(blank=True, default="")
+    image_url = models.URLField(max_length=2048, blank=True, default="")
     published_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -78,7 +80,14 @@ class Article(models.Model):
                 self.content,
                 tags=Article.ALLOWED_TAGS,
                 attributes=Article.ALLOWED_ATTRIBUTES,
-                strip=True,  # Remove disallowed tags instead of escaping them
+                strip=True,
+            )
+        if self.summary:
+            self.summary = bleach.clean(
+                self.summary,
+                tags=Article.ALLOWED_TAGS,
+                attributes=Article.ALLOWED_ATTRIBUTES,
+                strip=True,
             )
         super().save(*args, **kwargs)
 
@@ -114,3 +123,61 @@ class ArticleUserState(models.Model):
 
     def __str__(self) -> str:
         return f"state(user={self.user_id}, article={self.article_id})"
+
+
+class Tag(models.Model):
+    name = models.CharField(max_length=100)
+    slug = models.SlugField(max_length=120)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="tags",
+    )
+    color = models.CharField(max_length=7, default="#3B82F6")
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["user", "slug"], name="uniq_user_tag_slug"),
+        ]
+        ordering = ["name"]
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.name, allow_unicode=True)
+        super().save(*args, **kwargs)
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class Bookmark(models.Model):
+    url = models.URLField(max_length=2048)
+    title = models.CharField(max_length=500)
+    description = models.TextField(blank=True, default="")
+    thumbnail_url = models.URLField(max_length=2048, blank=True, default="")
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="bookmarks",
+    )
+    source_article = models.ForeignKey(
+        Article,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="bookmarks",
+    )
+    tags = models.ManyToManyField(Tag, blank=True, related_name="bookmarks")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "url"], name="uniq_user_bookmark_url"
+            ),
+        ]
+        ordering = ["-created_at"]
+
+    def __str__(self) -> str:
+        return self.title

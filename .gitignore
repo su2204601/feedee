@@ -8,3 +8,19 @@ wheels/
 
 # Virtual environments
 .venv
+
+# Environment variables (secrets)
+.env
+
+# Database
+db.sqlite3
+
+# Django collected static files
+staticfiles/
+
+# Go binary
+bin/rss-worker
+
+# IDE
+.idea/
+.vscode/

@@ -15,15 +15,16 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .forms import FeedCreateForm, FeedUpdateForm
-from .models import Article, ArticleUserState, Feed
+from .forms import BookmarkForm, FeedCreateForm, FeedUpdateForm, TagForm
+from .models import Article, ArticleUserState, Bookmark, Feed, Tag
 from .serializers import (
     ArticleIngestSerializer,
     ArticleUserStateSerializer,
     FeedReorderSerializer,
     FeedSerializer,
+    FetchMetadataSerializer,
 )
-from .utils import generate_article_hash, normalize_url
+from .utils import fetch_url_metadata, generate_article_hash, normalize_url
 
 logger = logging.getLogger(__name__)
 
@@ -89,6 +90,7 @@ class ArticleIngestView(APIView):
                         "guid": item.get("guid") or None,
                         "summary": item.get("summary") or "",
                         "content": item.get("content") or "",
+                        "image_url": item.get("image_url") or "",
                         "published_at": item.get("published_at"),
                     },
                 )
@@ -247,6 +249,7 @@ def dashboard_view(request):
                 "domain": domain,
                 "feed_name": article.feed.name if article.feed else "",
                 "summary": article.summary or "",
+                "image_url": article.image_url or "",
                 "published_at": article.published_at,
                 "created_at": article.created_at,
                 "is_favorite": state.is_favorite if state else False,
@@ -271,6 +274,31 @@ def dashboard_view(request):
         "current_page": "dashboard",
         "breadcrumbs": [],
     }
+
+    # Recent bookmarks for portal dashboard
+    if request.user.is_authenticated:
+        recent_bookmarks = (
+            Bookmark.objects.filter(user=request.user)
+            .prefetch_related("tags")
+            .order_by("-created_at")[:5]
+        )
+        bookmark_cards = []
+        for bm in recent_bookmarks:
+            domain = urlparse(bm.url).netloc
+            bookmark_cards.append(
+                {
+                    "id": bm.id,
+                    "url": bm.url,
+                    "title": bm.title,
+                    "description": bm.description,
+                    "thumbnail_url": bm.thumbnail_url,
+                    "domain": domain,
+                    "tags": list(bm.tags.all()),
+                    "created_at": bm.created_at,
+                }
+            )
+        context["recent_bookmarks"] = bookmark_cards
+
     return render(request, "rss/dashboard.html", context)
 
 
@@ -467,6 +495,7 @@ def feed_articles_view(request, feed_id):
                 "domain": domain,
                 "feed_name": feed.name,
                 "summary": article.summary or "",
+                "image_url": article.image_url or "",
                 "published_at": article.published_at,
                 "created_at": article.created_at,
                 "is_favorite": state.is_favorite if state else False,
@@ -579,3 +608,280 @@ def mark_all_read_view(request):
 
     messages.success(request, "All articles marked as read.")
     return redirect(redirect_url)
+
+
+# ── Fetch Metadata API ──────────────────────────────────
+
+
+class FetchMetadataView(APIView):
+    authentication_classes = [BasicAuthentication, SessionAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = FetchMetadataSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        metadata = fetch_url_metadata(serializer.validated_data["url"])
+        return Response(metadata, status=status.HTTP_200_OK)
+
+
+# ── Bookmark views ──────────────────────────────────────
+
+
+def bookmark_list_view(request):
+    if not request.user.is_authenticated:
+        return redirect("rss-dashboard")
+
+    query = request.GET.get("q", "").strip()
+    tag_slug = request.GET.get("tag", "").strip()
+
+    bookmarks_qs = Bookmark.objects.filter(user=request.user).prefetch_related("tags")
+    if query:
+        bookmarks_qs = bookmarks_qs.filter(
+            Q(title__icontains=query)
+            | Q(description__icontains=query)
+            | Q(url__icontains=query)
+        )
+    if tag_slug:
+        bookmarks_qs = bookmarks_qs.filter(tags__slug=tag_slug)
+
+    tags = Tag.objects.filter(user=request.user).annotate(
+        bookmark_count=Count("bookmarks")
+    )
+
+    paginator = Paginator(bookmarks_qs, 20)
+    page_obj = paginator.get_page(request.GET.get("page"))
+
+    bookmark_cards = []
+    for bm in page_obj.object_list:
+        domain = urlparse(bm.url).netloc
+        bookmark_cards.append(
+            {
+                "id": bm.id,
+                "url": bm.url,
+                "title": bm.title,
+                "description": bm.description,
+                "thumbnail_url": bm.thumbnail_url,
+                "domain": domain,
+                "tags": list(bm.tags.all()),
+                "created_at": bm.created_at,
+                "source_article_id": bm.source_article_id,
+            }
+        )
+
+    return render(
+        request,
+        "bookmarks/bookmark_list.html",
+        {
+            "bookmark_cards": bookmark_cards,
+            "page_obj": page_obj,
+            "bookmark_count": bookmarks_qs.count(),
+            "query": query,
+            "tag_slug": tag_slug,
+            "tags": tags,
+            "current_page": "bookmarks",
+        },
+    )
+
+
+def _save_bookmark_tags(bookmark, tag_names_str, user):
+    """Parse comma-separated tag names, create missing tags, then set on bookmark."""
+    tag_names = [name.strip() for name in tag_names_str.split(",") if name.strip()]
+    tags = []
+    for name in tag_names:
+        from django.utils.text import slugify
+
+        slug = slugify(name, allow_unicode=True)
+        tag, _ = Tag.objects.get_or_create(
+            user=user, slug=slug, defaults={"name": name}
+        )
+        tags.append(tag)
+    bookmark.tags.set(tags)
+
+
+def bookmark_add_view(request):
+    if not request.user.is_authenticated:
+        return redirect("rss-dashboard")
+
+    if request.method == "POST":
+        form = BookmarkForm(request.POST)
+        if form.is_valid():
+            bookmark = form.save(commit=False)
+            bookmark.user = request.user
+            # Store thumbnail from hidden field
+            bookmark.thumbnail_url = request.POST.get("thumbnail_url", "")
+            # Link to source article if provided
+            source_id = request.POST.get("source_article_id")
+            if source_id:
+                bookmark.source_article_id = int(source_id)
+            try:
+                bookmark.save()
+                _save_bookmark_tags(
+                    bookmark, form.cleaned_data.get("tag_names", ""), request.user
+                )
+                messages.success(request, "Bookmark added.")
+                return redirect("bookmark-list")
+            except IntegrityError:
+                messages.error(request, "This URL is already bookmarked.")
+    else:
+        form = BookmarkForm()
+
+    existing_tags = Tag.objects.filter(user=request.user).order_by("name")
+    return render(
+        request,
+        "bookmarks/bookmark_form.html",
+        {
+            "form": form,
+            "existing_tags": existing_tags,
+            "edit_mode": False,
+            "current_page": "bookmarks",
+        },
+    )
+
+
+def bookmark_edit_view(request, bookmark_id):
+    if not request.user.is_authenticated:
+        return redirect("rss-dashboard")
+
+    bookmark = get_object_or_404(Bookmark, id=bookmark_id, user=request.user)
+
+    if request.method == "POST":
+        form = BookmarkForm(request.POST, instance=bookmark)
+        if form.is_valid():
+            bm = form.save(commit=False)
+            bm.thumbnail_url = request.POST.get("thumbnail_url", bookmark.thumbnail_url)
+            bm.save()
+            _save_bookmark_tags(
+                bm, form.cleaned_data.get("tag_names", ""), request.user
+            )
+            messages.success(request, "Bookmark updated.")
+            return redirect("bookmark-list")
+    else:
+        tag_names = ", ".join(t.name for t in bookmark.tags.all())
+        form = BookmarkForm(instance=bookmark, initial={"tag_names": tag_names})
+
+    existing_tags = Tag.objects.filter(user=request.user).order_by("name")
+    return render(
+        request,
+        "bookmarks/bookmark_form.html",
+        {
+            "form": form,
+            "bookmark": bookmark,
+            "existing_tags": existing_tags,
+            "edit_mode": True,
+            "current_page": "bookmarks",
+        },
+    )
+
+
+def bookmark_delete_view(request, bookmark_id):
+    if not request.user.is_authenticated:
+        return redirect("rss-dashboard")
+    if request.method != "POST":
+        return redirect("bookmark-list")
+    bookmark = get_object_or_404(Bookmark, id=bookmark_id, user=request.user)
+    bookmark.delete()
+    messages.success(request, "Bookmark deleted.")
+    return redirect("bookmark-list")
+
+
+def bookmark_from_article_view(request, article_id):
+    """Pre-fill bookmark form from an RSS article."""
+    if not request.user.is_authenticated:
+        return redirect("rss-dashboard")
+
+    article = get_object_or_404(Article, id=article_id)
+
+    # If already bookmarked, redirect to edit
+    existing = Bookmark.objects.filter(user=request.user, url=article.link).first()
+    if existing:
+        messages.info(request, "This article is already bookmarked.")
+        return redirect("bookmark-edit", bookmark_id=existing.id)
+
+    form = BookmarkForm(
+        initial={
+            "url": article.link,
+            "title": article.title,
+            "description": article.summary or "",
+        }
+    )
+
+    existing_tags = Tag.objects.filter(user=request.user).order_by("name")
+    return render(
+        request,
+        "bookmarks/bookmark_form.html",
+        {
+            "form": form,
+            "source_article_id": article.id,
+            "existing_tags": existing_tags,
+            "edit_mode": False,
+            "current_page": "bookmarks",
+        },
+    )
+
+
+# ── Tag views ───────────────────────────────────────────
+
+
+def tag_list_view(request):
+    if not request.user.is_authenticated:
+        return redirect("rss-dashboard")
+
+    if request.method == "POST":
+        form = TagForm(request.POST)
+        if form.is_valid():
+            tag = form.save(commit=False)
+            tag.user = request.user
+            try:
+                tag.save()
+                messages.success(request, f'Tag "{tag.name}" created.')
+                return redirect("tag-list")
+            except IntegrityError:
+                messages.error(request, "A tag with this name already exists.")
+    else:
+        form = TagForm()
+
+    tags = Tag.objects.filter(user=request.user).annotate(
+        bookmark_count=Count("bookmarks")
+    )
+
+    tag_rows = [
+        {"tag": tag, "form": TagForm(instance=tag, prefix=f"tag-{tag.id}")}
+        for tag in tags
+    ]
+
+    return render(
+        request,
+        "bookmarks/tag_list.html",
+        {
+            "tag_form": form,
+            "tags": tags,
+            "tag_rows": tag_rows,
+            "current_page": "tag-settings",
+        },
+    )
+
+
+def tag_update_view(request, tag_id):
+    if not request.user.is_authenticated:
+        return redirect("rss-dashboard")
+    if request.method != "POST":
+        return redirect("tag-list")
+
+    tag = get_object_or_404(Tag, id=tag_id, user=request.user)
+
+    if request.POST.get("action") == "delete":
+        name = tag.name
+        tag.delete()
+        messages.success(request, f"Deleted tag: {name}")
+        return redirect("tag-list")
+
+    form = TagForm(request.POST, instance=tag, prefix=f"tag-{tag.id}")
+    if form.is_valid():
+        t = form.save(commit=False)
+        t.user = request.user
+        t.save()
+        messages.success(request, f"Updated tag: {t.name}")
+    else:
+        messages.error(request, "Could not update tag.")
+
+    return redirect("tag-list")

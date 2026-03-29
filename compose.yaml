@@ -1,0 +1,26 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: >
+      python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings.development
+
+  rss-worker:
+    build:
+      context: .
+      dockerfile: rss_worker/Dockerfile
+    env_file:
+      - .env
+    environment:
+      - DJANGO_BASE_URL=http://web:8000
+    depends_on:
+      - web

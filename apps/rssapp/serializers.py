@@ -30,6 +30,9 @@ class ArticleIngestSerializer(serializers.Serializer):
     )
     summary = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     content = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    image_url = serializers.URLField(
+        max_length=2048, required=False, allow_blank=True, allow_null=True
+    )
     published_at = serializers.DateTimeField(required=False, allow_null=True)
 
 
@@ -40,3 +43,7 @@ class ArticleUserStateSerializer(serializers.ModelSerializer):
         model = ArticleUserState
         fields = ["article", "is_favorite", "is_read_later", "is_read", "updated_at"]
         read_only_fields = ["article", "updated_at"]
+
+
+class FetchMetadataSerializer(serializers.Serializer):
+    url = serializers.URLField(max_length=2048)

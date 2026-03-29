@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+
+{% block title %}{% if edit_mode %}Edit bookmark{% else %}Add bookmark{% endif %} – Feedee{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto px-4 md:px-8 py-6">
+    <div class="mb-6">
+        <a href="{% url 'bookmark-list' %}" class="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-brand-600 transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M15 19l-7-7 7-7"/></svg>
+            Back to bookmarks
+        </a>
+        <h1 class="mt-3 text-xl font-semibold text-gray-900">{% if edit_mode %}Edit bookmark{% else %}Add bookmark{% endif %}</h1>
+    </div>
+
+    <section class="rounded-xl bg-white border border-gray-200 shadow-soft p-6">
+        <form method="post" action="{% if edit_mode %}{% url 'bookmark-edit' bookmark.id %}{% else %}{% url 'bookmark-add' %}{% endif %}">
+            {% csrf_token %}
+            {% if source_article_id %}
+                <input type="hidden" name="source_article_id" value="{{ source_article_id }}">
+            {% endif %}
+            <input type="hidden" name="thumbnail_url" id="bookmark-thumbnail-url" value="{% if edit_mode %}{{ bookmark.thumbnail_url }}{% endif %}">
+
+            <div class="space-y-4">
+                {# ── URL ── #}
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 mb-1">URL</label>
+                    {{ form.url }}
+                    <p id="fetch-status" class="mt-1 text-xs text-gray-400 hidden"></p>
+                </div>
+
+                {# ── Title ── #}
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 mb-1">Title</label>
+                    {{ form.title }}
+                </div>
+
+                {# ── Description ── #}
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 mb-1">Description</label>
+                    {{ form.description }}
+                </div>
+
+                {# ── Thumbnail preview ── #}
+                <div id="thumbnail-preview" class="{% if not edit_mode or not bookmark.thumbnail_url %}hidden{% endif %}">
+                    <label class="block text-xs font-medium text-gray-500 mb-1">Thumbnail</label>
+                    <div class="rounded-lg border border-gray-200 overflow-hidden bg-gray-50 h-40 flex items-center justify-center">
+                        <img id="thumbnail-img" src="{% if edit_mode %}{{ bookmark.thumbnail_url }}{% endif %}" alt="" class="max-h-full max-w-full object-contain">
+                    </div>
+                </div>
+
+                {# ── Tags ── #}
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 mb-1">Tags (comma separated)</label>
+                    {{ form.tag_names }}
+                    {% if existing_tags %}
+                    <div class="mt-2 flex flex-wrap gap-1">
+                        {% for tag in existing_tags %}
+                        <button type="button"
+                                class="tag-pill inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 transition-colors cursor-pointer"
+                                data-tag-name="{{ tag.name }}" style="border-color: {{ tag.color }}40">
+                            <span class="w-2 h-2 rounded-full mr-1.5" style="background-color: {{ tag.color }}"></span>
+                            {{ tag.name }}
+                        </button>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="mt-6 flex items-center justify-between">
+                <a href="{% url 'bookmark-list' %}" class="text-sm text-gray-500 hover:text-gray-700 font-medium">Cancel</a>
+                <button type="submit"
+                        class="rounded-lg bg-brand-600 hover:bg-brand-700 text-white px-5 py-2.5 text-sm font-medium transition-colors shadow-sm">
+                    {% if edit_mode %}Save changes{% else %}Add bookmark{% endif %}
+                </button>
+            </div>
+        </form>
+    </section>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    var urlInput = document.getElementById('bookmark-url');
+    var titleInput = document.getElementById('bookmark-title');
+    var descInput = document.getElementById('bookmark-description');
+    var thumbInput = document.getElementById('bookmark-thumbnail-url');
+    var thumbPreview = document.getElementById('thumbnail-preview');
+    var thumbImg = document.getElementById('thumbnail-img');
+    var fetchStatus = document.getElementById('fetch-status');
+    var csrf = document.querySelector('input[name="csrfmiddlewaretoken"]');
+
+    if (urlInput && !titleInput.value.trim()) {
+        urlInput.addEventListener('blur', async function() {
+            var url = urlInput.value.trim();
+            if (!url) return;
+            fetchStatus.textContent = 'Fetching metadata…';
+            fetchStatus.classList.remove('hidden');
+            try {
+                var res = await fetch('{% url "fetch-metadata" %}', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrf ? csrf.value : ''},
+                    body: JSON.stringify({url: url})
+                });
+                if (!res.ok) throw new Error();
+                var data = await res.json();
+                if (data.title && !titleInput.value.trim()) titleInput.value = data.title;
+                if (data.description && !descInput.value.trim()) descInput.value = data.description;
+                if (data.thumbnail_url) {
+                    thumbInput.value = data.thumbnail_url;
+                    thumbImg.src = data.thumbnail_url;
+                    thumbPreview.classList.remove('hidden');
+                }
+                fetchStatus.textContent = 'Metadata loaded.';
+                setTimeout(function() { fetchStatus.classList.add('hidden'); }, 2000);
+            } catch(e) {
+                fetchStatus.textContent = 'Could not fetch metadata.';
+                setTimeout(function() { fetchStatus.classList.add('hidden'); }, 3000);
+            }
+        });
+    }
+
+    // Tag pill click to toggle in comma-separated field
+    var tagInput = document.querySelector('input[name="tag_names"]');
+    document.querySelectorAll('.tag-pill').forEach(function(pill) {
+        pill.addEventListener('click', function() {
+            var name = pill.dataset.tagName;
+            var current = tagInput.value.split(',').map(function(s) { return s.trim(); }).filter(Boolean);
+            var idx = current.indexOf(name);
+            if (idx >= 0) {
+                current.splice(idx, 1);
+                pill.classList.remove('ring-2', 'ring-brand-500');
+            } else {
+                current.push(name);
+                pill.classList.add('ring-2', 'ring-brand-500');
+            }
+            tagInput.value = current.join(', ');
+        });
+
+        // Highlight already-selected tags on load
+        var current = tagInput.value.split(',').map(function(s) { return s.trim(); });
+        if (current.indexOf(pill.dataset.tagName) >= 0) {
+            pill.classList.add('ring-2', 'ring-brand-500');
+        }
+    });
+})();
+</script>
+{% endblock %}

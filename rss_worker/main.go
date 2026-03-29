@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -47,6 +48,7 @@ type IngestArticle struct {
 	GUID        string  `json:"guid,omitempty"`
 	Summary     string  `json:"summary,omitempty"`
 	Content     string  `json:"content,omitempty"`
+	ImageURL    string  `json:"image_url,omitempty"`
 	PublishedAt *string `json:"published_at,omitempty"`
 }
 
@@ -66,13 +68,33 @@ type rssChannel struct {
 }
 
 type rssItem struct {
-	Title       string `xml:"title"`
-	Link        string `xml:"link"`
-	GUID        string `xml:"guid"`
-	Description string `xml:"description"`
-	Content     string `xml:"http://purl.org/rss/1.0/modules/content/ encoded"`
-	PubDate     string `xml:"pubDate"`
+	Title          string         `xml:"title"`
+	Link           string         `xml:"link"`
+	GUID           string         `xml:"guid"`
+	Description    string         `xml:"description"`
+	Content        string         `xml:"http://purl.org/rss/1.0/modules/content/ encoded"`
+	PubDate        string         `xml:"pubDate"`
+	MediaThumbnail mediaURL       `xml:"http://search.yahoo.com/mrss/ thumbnail"`
+	MediaContent   []mediaContent `xml:"http://search.yahoo.com/mrss/ content"`
+	Enclosure      enclosure      `xml:"enclosure"`
 }
+
+type mediaURL struct {
+	URL string `xml:"url,attr"`
+}
+
+type mediaContent struct {
+	URL    string `xml:"url,attr"`
+	Medium string `xml:"medium,attr"`
+	Type   string `xml:"type,attr"`
+}
+
+type enclosure struct {
+	URL  string `xml:"url,attr"`
+	Type string `xml:"type,attr"`
+}
+
+var imgSrcRe = regexp.MustCompile(`<img[^>]+src=["']([^"']+)["']`)
 
 type feedFetchResult struct {
 	FeedName  string
@@ -280,12 +302,13 @@ func parseRSS(xmlData []byte, feedID int) ([]IngestArticle, error) {
 		}
 
 		article := IngestArticle{
-			FeedID:  &feedID,
-			Title:   title,
-			Link:    link,
-			GUID:    guid,
-			Summary: strings.TrimSpace(item.Description),
-			Content: strings.TrimSpace(item.Content),
+			FeedID:   &feedID,
+			Title:    title,
+			Link:     link,
+			GUID:     guid,
+			Summary:  strings.TrimSpace(item.Description),
+			Content:  strings.TrimSpace(item.Content),
+			ImageURL: extractImageURL(item),
 		}
 
 		if parsedTime, ok := parsePubDate(item.PubDate); ok {
@@ -322,6 +345,36 @@ func parsePubDate(value string) (time.Time, bool) {
 	}
 
 	return time.Time{}, false
+}
+
+func extractImageURL(item rssItem) string {
+	// Priority 1: media:thumbnail
+	if u := strings.TrimSpace(item.MediaThumbnail.URL); u != "" {
+		return u
+	}
+	// Priority 2: media:content with medium="image" or image/* type
+	for _, mc := range item.MediaContent {
+		u := strings.TrimSpace(mc.URL)
+		if u == "" {
+			continue
+		}
+		if mc.Medium == "image" || strings.HasPrefix(mc.Type, "image/") {
+			return u
+		}
+	}
+	// Priority 3: enclosure with image/* type
+	if u := strings.TrimSpace(item.Enclosure.URL); u != "" {
+		if strings.HasPrefix(item.Enclosure.Type, "image/") {
+			return u
+		}
+	}
+	// Priority 4: first <img src="..."> in content or description
+	for _, html := range []string{item.Content, item.Description} {
+		if m := imgSrcRe.FindStringSubmatch(html); len(m) > 1 {
+			return strings.TrimSpace(m[1])
+		}
+	}
+	return ""
 }
 
 func collectBatchArticles(results []feedFetchResult) []IngestArticle {

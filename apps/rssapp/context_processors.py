@@ -2,7 +2,7 @@ from collections import OrderedDict
 
 from django.db.models import Count, Q
 
-from .models import Article, ArticleUserState, Feed
+from .models import Article, ArticleUserState, Bookmark, Feed, Tag
 
 
 def _category_label(value):
@@ -52,10 +52,24 @@ def sidebar_feeds(request):
 
     sidebar_groups = [{"name": name, "feeds": items} for name, items in grouped.items()]
 
+    # Bookmark / tag data for sidebar
+    sidebar_tags = []
+    total_bookmarks = 0
+    if request.user.is_authenticated:
+        total_bookmarks = Bookmark.objects.filter(user=request.user).count()
+        sidebar_tags = list(
+            Tag.objects.filter(user=request.user)
+            .annotate(bookmark_count=Count("bookmarks"))
+            .order_by("name")
+            .values("id", "name", "slug", "color", "bookmark_count")
+        )
+
     return {
         "sidebar_feeds": feed_list,
         "sidebar_groups": sidebar_groups,
         "sidebar_total_unread": total_unread,
         "sidebar_total_read_later": total_read_later,
         "sidebar_total_favorites": total_favorites,
+        "sidebar_tags": sidebar_tags,
+        "sidebar_total_bookmarks": total_bookmarks,
     }

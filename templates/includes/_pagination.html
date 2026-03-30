@@ -1,0 +1,27 @@
+{# Reusable pagination with page numbers #}
+{# Expects: page_obj, plus any of: query, state_filter, tag_slug #}
+{% if page_obj.paginator.num_pages > 1 %}
+<nav class="mt-6 flex items-center justify-between text-sm">
+    <span class="text-gray-500">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+    <div class="flex items-center gap-1">
+        {% if page_obj.has_previous %}
+            <a href="?page={{ page_obj.previous_page_number }}{% if query %}&q={{ query }}{% endif %}{% if state_filter and state_filter != 'all' %}&state={{ state_filter }}{% endif %}{% if tag_slug %}&tag={{ tag_slug }}{% endif %}"
+               class="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50 shadow-sm">&larr;</a>
+        {% endif %}
+        {% for p in page_obj.paginator.page_range %}
+            {% if page_obj.number == p %}
+                <span class="rounded-lg bg-brand-600 text-white px-3 py-1.5 text-sm font-medium shadow-sm">{{ p }}</span>
+            {% elif p == 1 or p == page_obj.paginator.num_pages or p >= page_obj.number|add:"-2" and p <= page_obj.number|add:"2" %}
+                <a href="?page={{ p }}{% if query %}&q={{ query }}{% endif %}{% if state_filter and state_filter != 'all' %}&state={{ state_filter }}{% endif %}{% if tag_slug %}&tag={{ tag_slug }}{% endif %}"
+                   class="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50 shadow-sm">{{ p }}</a>
+            {% elif p == 2 and page_obj.number > 4 or p == page_obj.paginator.num_pages|add:"-1" and page_obj.number < page_obj.paginator.num_pages|add:"-3" %}
+                <span class="px-1 text-gray-400">&hellip;</span>
+            {% endif %}
+        {% endfor %}
+        {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}{% if query %}&q={{ query }}{% endif %}{% if state_filter and state_filter != 'all' %}&state={{ state_filter }}{% endif %}{% if tag_slug %}&tag={{ tag_slug }}{% endif %}"
+               class="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50 shadow-sm">&rarr;</a>
+        {% endif %}
+    </div>
+</nav>
+{% endif %}

@@ -1,0 +1,66 @@
+{# Reusable article card with inline state toggle buttons #}
+{# Expects: article (dict with id, title, link, domain, feed_name, summary, image_url, published_at, created_at, is_favorite, is_read_later, is_read) #}
+<div class="article-card group flex items-start gap-3 rounded-lg border border-transparent hover:border-gray-200 hover:bg-white hover:shadow-soft p-3 -mx-1 transition-all {% if article.is_read %}is-read{% endif %}"
+     data-article-id="{{ article.id }}">
+    {% if article.image_url %}
+    <a href="{% url 'article-reader' article.id %}" class="flex-shrink-0 hidden sm:block">
+        <img src="{{ article.image_url }}" alt="" class="w-28 h-20 rounded-lg object-cover bg-gray-100" loading="lazy">
+    </a>
+    {% endif %}
+    <a href="{% url 'article-reader' article.id %}" class="flex-1 min-w-0">
+        <h2 class="text-sm font-medium leading-snug {% if article.is_read %}text-gray-500{% else %}text-gray-900 group-hover:text-brand-700{% endif %} transition-colors">
+            {{ article.title }}
+        </h2>
+        {% if article.summary %}
+            <p class="mt-1 text-xs text-gray-400 line-clamp-2 leading-relaxed">{{ article.summary|striptags|truncatewords:30 }}</p>
+        {% endif %}
+        <div class="mt-1.5 flex items-center gap-2 text-[11px] text-gray-400">
+            {% if article.feed_name %}
+                <span class="font-medium text-gray-500">{{ article.feed_name }}</span>
+                <span>&middot;</span>
+            {% endif %}
+            <time datetime="{{ article.published_at|default:article.created_at|date:'c' }}" title="{{ article.published_at|default:article.created_at|date:'Y-m-d H:i' }}">{{ article.published_at|default:article.created_at|timesince }} ago</time>
+            <span>&middot;</span>
+            <span>{{ article.domain }}</span>
+        </div>
+    </a>
+    <div class="flex items-center gap-0.5 flex-shrink-0 pt-0.5">
+        {% if request.user.is_authenticated %}
+        {# ── Favorite toggle ── #}
+        <button type="button" title="{% if article.is_favorite %}Remove favorite{% else %}Add favorite{% endif %}"
+                class="state-toggle p-1.5 rounded-lg transition-colors {% if article.is_favorite %}text-amber-500{% else %}text-gray-400 hover:text-amber-500 opacity-0 group-hover:opacity-100{% endif %}"
+                data-article-id="{{ article.id }}" data-field="is_favorite" data-active="{% if article.is_favorite %}true{% else %}false{% endif %}">
+            <svg class="w-4 h-4" fill="{% if article.is_favorite %}currentColor{% else %}none{% endif %}" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M11.05 3.612c.35-.86 1.55-.86 1.9 0l2.07 5.07 5.45.46c.94.08 1.32 1.24.6 1.86l-4.13 3.56 1.26 5.32c.22.92-.78 1.64-1.6 1.16L12 18.26l-4.53 2.76c-.82.48-1.82-.24-1.6-1.16l1.26-5.32-4.13-3.56c-.72-.62-.34-1.78.6-1.86l5.45-.46 2.07-5.07z"/></svg>
+        </button>
+        {# ── Read Later toggle ── #}
+        <button type="button" title="{% if article.is_read_later %}Remove read later{% else %}Read later{% endif %}"
+                class="state-toggle p-1.5 rounded-lg transition-colors {% if article.is_read_later %}text-sky-500{% else %}text-gray-400 hover:text-sky-500 opacity-0 group-hover:opacity-100{% endif %}"
+                data-article-id="{{ article.id }}" data-field="is_read_later" data-active="{% if article.is_read_later %}true{% else %}false{% endif %}">
+            <svg class="w-4 h-4" fill="{% if article.is_read_later %}currentColor{% else %}none{% endif %}" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/></svg>
+        </button>
+        {# ── Read toggle ── #}
+        <button type="button" title="{% if article.is_read %}Mark unread{% else %}Mark read{% endif %}"
+                class="state-toggle p-1.5 rounded-lg transition-colors {% if article.is_read %}text-emerald-500{% else %}text-gray-400 hover:text-emerald-500 opacity-0 group-hover:opacity-100{% endif %}"
+                data-article-id="{{ article.id }}" data-field="is_read" data-active="{% if article.is_read %}true{% else %}false{% endif %}">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M5 13l4 4L19 7"/></svg>
+        </button>
+        <span class="w-px h-5 bg-gray-200 mx-0.5 opacity-0 group-hover:opacity-100"></span>
+        {# ── Bookmark link ── #}
+        <a href="{% url 'bookmark-from-article' article.id %}" title="Bookmark"
+           class="p-1.5 rounded-lg text-gray-400 hover:text-violet-600 transition-colors opacity-0 group-hover:opacity-100">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101M10.172 13.828a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+        </a>
+        {% else %}
+        {# Read-only state icons for anonymous users #}
+        {% if article.is_favorite %}
+            <span class="text-amber-500" title="Favorite"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg></span>
+        {% endif %}
+        {% if article.is_read_later %}
+            <span class="text-sky-500" title="Read later"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z"/></svg></span>
+        {% endif %}
+        {% if article.is_read %}
+            <span class="text-emerald-500" title="Read"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg></span>
+        {% endif %}
+        {% endif %}
+    </div>
+</div>

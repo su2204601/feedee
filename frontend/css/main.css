@@ -40,3 +40,27 @@ body {
     pointer-events: auto;
   }
 }
+
+/* ── Article card read state ─────────────────────────── */
+.article-card {
+  position: relative;
+}
+.article-card:not(.is-read)::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  background: #2563eb;
+  border-radius: 2px;
+}
+.article-card.is-read img {
+  filter: grayscale(0.5);
+  opacity: 0.7;
+}
+
+/* ── State toggle always-visible on active ───────────── */
+.state-toggle[data-active="true"] {
+  opacity: 1 !important;
+}

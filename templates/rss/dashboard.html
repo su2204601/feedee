@@ -23,7 +23,7 @@
         </div>
         <div class="flex items-center gap-2">
             {% if request.user.is_authenticated %}
-            <form method="post" action="{% url 'mark-all-read' %}">
+            <form method="post" action="{% url 'mark-all-read' %}" data-confirm="Mark all displayed articles as read?">
                 {% csrf_token %}
                 <input type="hidden" name="state" value="{{ state_filter }}">
                 <input type="hidden" name="q" value="{{ query }}">
@@ -61,70 +61,12 @@
     {% if article_cards %}
     <div class="space-y-1">
         {% for article in article_cards %}
-        <div class="group flex items-start gap-3 rounded-lg border border-transparent hover:border-gray-200 hover:bg-white hover:shadow-soft p-3 -mx-1 transition-all">
-            {% if article.image_url %}
-            <a href="{% url 'article-reader' article.id %}" class="flex-shrink-0 hidden sm:block">
-                <img src="{{ article.image_url }}" alt="" class="w-28 h-20 rounded-lg object-cover bg-gray-100" loading="lazy">
-            </a>
-            {% endif %}
-            <a href="{% url 'article-reader' article.id %}" class="flex-1 min-w-0">
-                <h2 class="text-sm font-medium leading-snug {% if article.is_read %}text-gray-400{% else %}text-gray-900 group-hover:text-brand-700{% endif %} transition-colors">
-                    {{ article.title }}
-                </h2>
-                {% if article.summary %}
-                    <p class="mt-1 text-xs text-gray-400 line-clamp-2 leading-relaxed">{{ article.summary|striptags|truncatewords:30 }}</p>
-                {% endif %}
-                <div class="mt-1.5 flex items-center gap-2 text-[11px] text-gray-400">
-                    <span class="font-medium text-gray-500">{{ article.feed_name }}</span>
-                    <span>&middot;</span>
-                    <span>{{ article.published_at|default:article.created_at|timesince }} ago</span>
-                    <span>&middot;</span>
-                    <span>{{ article.domain }}</span>
-                </div>
-            </a>
-            <div class="flex items-center gap-1 flex-shrink-0 pt-0.5">
-                {% if article.is_favorite %}
-                    <span class="text-amber-400" title="Favorite">
-                        <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
-                    </span>
-                {% endif %}
-                {% if article.is_read_later %}
-                    <span class="text-sky-400" title="Read later">
-                        <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z"/></svg>
-                    </span>
-                {% endif %}
-                {% if article.is_read %}
-                    <span class="text-emerald-400" title="Read">
-                        <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-                    </span>
-                {% endif %}
-                {% if request.user.is_authenticated %}
-                <a href="{% url 'bookmark-from-article' article.id %}" title="Bookmark"
-                   class="p-1 rounded text-gray-300 hover:text-violet-500 transition-colors opacity-0 group-hover:opacity-100">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101M10.172 13.828a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
-                </a>
-                {% endif %}
-            </div>
-        </div>
+            {% include 'rss/_article_card.html' with article=article %}
         {% endfor %}
     </div>
 
     {# ── Pagination ─────────────────────────────────── #}
-    {% if page_obj.paginator.num_pages > 1 %}
-    <nav class="mt-6 flex items-center justify-between text-sm">
-        <span class="text-gray-500">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
-        <div class="flex gap-2">
-            {% if page_obj.has_previous %}
-                <a href="?page={{ page_obj.previous_page_number }}&q={{ query }}&state={{ state_filter }}"
-                   class="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50 shadow-sm">&larr; Prev</a>
-            {% endif %}
-            {% if page_obj.has_next %}
-                <a href="?page={{ page_obj.next_page_number }}&q={{ query }}&state={{ state_filter }}"
-                   class="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50 shadow-sm">Next &rarr;</a>
-            {% endif %}
-        </div>
-    </nav>
-    {% endif %}
+    {% include 'includes/_pagination.html' %}
 
     {% else %}
     <div class="rounded-xl border-2 border-dashed border-gray-200 bg-white/50 p-12 text-center">
@@ -153,6 +95,10 @@
                 {% if bm.thumbnail_url %}
                 <div class="h-32 bg-gray-100 overflow-hidden">
                     <img src="{{ bm.thumbnail_url }}" alt="" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" loading="lazy">
+                </div>
+                {% else %}
+                <div class="h-20 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
+                    <span class="text-2xl font-bold text-gray-300">{{ bm.domain|truncatechars:1|upper }}</span>
                 </div>
                 {% endif %}
                 <div class="p-3">

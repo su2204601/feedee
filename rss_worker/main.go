@@ -15,6 +15,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/joho/godotenv"
 )
 
 const (
@@ -107,6 +109,9 @@ type feedFetchResult struct {
 }
 
 func main() {
+	// Load .env file if it exists (for local development)
+	_ = godotenv.Load()
+
 	cfg := loadConfig()
 	client := &http.Client{Timeout: cfg.HTTPTimeout}
 

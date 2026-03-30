@@ -340,48 +340,8 @@ def dashboard_view(request):
 
 @login_required
 def feed_settings_view(request):
-    if request.method == "POST":
-        form = FeedCreateForm(request.POST)
-        if form.is_valid():
-            try:
-                new_feed = form.save(commit=False)
-                max_order = (
-                    Feed.objects.order_by("-display_order")
-                    .values_list("display_order", flat=True)
-                    .first()
-                )
-                new_feed.display_order = (max_order or 0) + 1
-                new_feed.save()
-                run_rss_worker()
-                messages.success(request, "Feed added to settings list.")
-                return redirect("feed-settings")
-            except IntegrityError:
-                messages.error(request, "This feed URL is already subscribed.")
-    else:
-        form = FeedCreateForm()
-
-    feeds = (
-        Feed.objects.all()
-        .annotate(article_count=Count("articles"))
-        .order_by("display_order", "id")
-    )
-    feed_rows = [
-        {
-            "feed": feed,
-            "form": FeedUpdateForm(instance=feed, prefix=f"feed-{feed.id}"),
-        }
-        for feed in feeds
-    ]
-    return render(
-        request,
-        "rss/feed_settings.html",
-        {
-            "feed_form": form,
-            "feeds": feeds,
-            "feed_rows": feed_rows,
-            "current_page": "settings",
-        },
-    )
+    """Legacy view — redirects to unified settings."""
+    return redirect("settings-feeds")
 
 
 @login_required
@@ -430,7 +390,10 @@ def settings_view(request, tab="feeds"):
                     new_feed.display_order = (max_order or 0) + 1
                     new_feed.save()
                     run_rss_worker()
-                    messages.success(request, "Feed added.")
+                    messages.success(
+                        request,
+                        "Feed added. Articles are being fetched in the background — they'll appear shortly.",
+                    )
                     return redirect("settings-feeds")
                 except IntegrityError:
                     messages.error(request, "This feed URL is already subscribed.")

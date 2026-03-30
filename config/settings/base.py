@@ -91,7 +91,14 @@ REST_FRAMEWORK = {
     },
 }
 
-LOGIN_URL = "/admin/login/"
+AUTHENTICATION_BACKENDS = [
+    "apps.rssapp.backends.EmailBackend",
+    "django.contrib.auth.backends.ModelBackend",
+]
+
+LOGIN_URL = "/login/"
+LOGIN_REDIRECT_URL = "/"
+LOGOUT_REDIRECT_URL = "/login/"
 
 LOGGING = {
     "version": 1,

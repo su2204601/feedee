@@ -1,4 +1,17 @@
-# ---- Build stage: install dependencies ----
+# ---- Frontend build stage: Vite + Tailwind ----
+FROM node:22-slim AS frontend
+
+WORKDIR /app
+
+COPY package.json package-lock.json* ./
+RUN npm ci
+
+COPY vite.config.js tailwind.config.js postcss.config.js ./
+COPY frontend/ frontend/
+COPY templates/ templates/
+RUN npm run build
+
+# ---- Python dependency stage ----
 FROM python:3.13-slim AS builder
 
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
@@ -17,6 +30,9 @@ COPY --from=builder /usr/local /usr/local
 
 WORKDIR /app
 COPY . .
+
+# Copy Vite build output
+COPY --from=frontend /app/static/dist/ static/dist/
 
 RUN chmod +x docker/entrypoint.sh
 

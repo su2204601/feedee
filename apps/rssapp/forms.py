@@ -1,5 +1,5 @@
 from django import forms
-from django.contrib.auth.forms import PasswordChangeForm as DjangoPasswordChangeForm
+from django.contrib.auth.forms import AuthenticationForm, PasswordChangeForm as DjangoPasswordChangeForm
 
 from .models import Bookmark, Feed, Tag, UserProfile
 
@@ -123,6 +123,26 @@ class UserProfileForm(forms.ModelForm):
                 }
             ),
         }
+
+
+class EmailLoginForm(AuthenticationForm):
+    username = forms.EmailField(
+        label="Email",
+        widget=forms.EmailInput(
+            attrs={
+                "class": _INPUT_CLASS,
+                "placeholder": "you@example.com",
+                "autofocus": True,
+            }
+        ),
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["password"].widget.attrs.update({
+            "class": _INPUT_CLASS,
+            "placeholder": "Password",
+        })
 
 
 class StyledPasswordChangeForm(DjangoPasswordChangeForm):

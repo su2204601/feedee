@@ -24,6 +24,12 @@ staticfiles/
 # Go binary
 bin/rss-worker
 
+# Node.js
+node_modules/
+
+# Vite build output
+static/dist/
+
 # IDE
 .idea/
 .vscode/

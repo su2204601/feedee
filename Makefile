@@ -1,7 +1,8 @@
 .PHONY: help dev up down logs build test migrate shell worker \
        prod-up prod-down prod-logs prod-build prod-migrate prod-shell \
        backup backup-dev backup-prod restore-dev restore-prod \
-       lint fmt clean
+       lint fmt clean \
+       fe-install fe-dev fe-build
 
 # -------------------------------------------------------------------
 # Variables
@@ -114,6 +115,18 @@ list-backups: ## List all backups
 	@echo ""
 	@echo "=== Prod backups ==="
 	@ls -1t $(BACKUP_DIR)/prod/ 2>/dev/null || echo "  (none)"
+
+# ===================================================================
+#  Frontend (Vite + Tailwind)
+# ===================================================================
+fe-install: ## Install frontend dependencies
+	npm install
+
+fe-dev: ## Start Vite dev server (HMR)
+	npm run dev
+
+fe-build: ## Build frontend for production
+	npm run build
 
 # ===================================================================
 #  Utilities

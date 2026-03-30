@@ -1,0 +1,53 @@
+{% load static vite %}
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign in - Feedee</title>
+    {% vite_assets "js/main.js" %}
+</head>
+<body class="h-full bg-gray-50 font-sans antialiased flex items-center justify-center min-h-screen">
+
+<div class="w-full max-w-sm mx-auto px-4">
+    <div class="text-center mb-8">
+        <div class="w-12 h-12 mx-auto rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center shadow-sm mb-4">
+            <span class="text-white font-bold text-xl leading-none">F</span>
+        </div>
+        <h1 class="text-xl font-semibold text-gray-900">Sign in to Feedee</h1>
+    </div>
+
+    <div class="bg-white rounded-xl border border-gray-200 shadow-soft p-6">
+        {% if form.errors %}
+            <div class="mb-4 rounded-lg px-4 py-3 text-sm font-medium border bg-rose-50 border-rose-200 text-rose-700">
+                Invalid email or password.
+            </div>
+        {% endif %}
+
+        <form method="post" class="space-y-4">
+            {% csrf_token %}
+
+            <div>
+                <label for="id_username" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                {{ form.username }}
+            </div>
+
+            <div>
+                <label for="id_password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                {{ form.password }}
+            </div>
+
+            <button type="submit"
+                    class="w-full rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 transition-colors">
+                Sign in
+            </button>
+
+            {% if next %}
+                <input type="hidden" name="next" value="{{ next }}">
+            {% endif %}
+        </form>
+    </div>
+</div>
+
+</body>
+</html>

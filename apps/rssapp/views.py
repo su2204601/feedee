@@ -4,6 +4,7 @@ import subprocess
 from urllib.parse import urlencode, urlparse
 
 from django.contrib import messages
+from django.contrib.auth import get_user_model, login
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db import IntegrityError, transaction
@@ -20,6 +21,7 @@ from .forms import (
     BookmarkForm,
     FeedCreateForm,
     FeedUpdateForm,
+    SignupForm,
     StyledPasswordChangeForm,
     TagForm,
     UserProfileForm,
@@ -32,7 +34,7 @@ from .serializers import (
     FeedSerializer,
     FetchMetadataSerializer,
 )
-from .utils import fetch_url_metadata, generate_article_hash, normalize_url
+from .utils import fetch_feed_title, fetch_url_metadata, generate_article_hash, normalize_url
 
 logger = logging.getLogger(__name__)
 
@@ -172,14 +174,12 @@ def run_rss_worker():
     Logs any errors but does not block the request.
     """
     try:
-        worker_script = os.path.join(
-            os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
-            "bin",
-            "rss-worker",
-        )
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+        worker_script = os.path.join(project_root, "bin", "rss-worker")
         if os.path.exists(worker_script):
             subprocess.Popen(
                 [worker_script],
+                cwd=project_root,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
                 start_new_session=True,
@@ -189,6 +189,17 @@ def run_rss_worker():
             logger.warning(f"RSS worker script not found at {worker_script}")
     except Exception as e:
         logger.error(f"Failed to start RSS worker: {e}")
+
+
+@login_required
+def refresh_feeds_view(request):
+    if request.method == "POST":
+        run_rss_worker()
+        messages.success(
+            request,
+            "Feed refresh started — new articles will appear shortly.",
+        )
+    return redirect("settings-feeds")
 
 
 def _build_article_list_context(request, base_qs, feed_name_fn=None):
@@ -306,6 +317,30 @@ def _build_article_list_context(request, base_qs, feed_name_fn=None):
     return context
 
 
+def signup_view(request):
+    if request.user.is_authenticated:
+        return redirect("rss-dashboard")
+
+    if request.method == "POST":
+        form = SignupForm(request.POST)
+        if form.is_valid():
+            User = get_user_model()
+            email = form.cleaned_data["email"]
+            user = User.objects.create_user(
+                username=email,
+                email=email,
+                password=form.cleaned_data["password"],
+            )
+            login(request, user, backend="apps.rssapp.backends.EmailBackend")
+            messages.success(request, "Account created successfully.")
+            return redirect("rss-dashboard")
+    else:
+        form = SignupForm()
+
+    return render(request, "auth/signup.html", {"form": form})
+
+
+@login_required
 def dashboard_view(request):
     base_qs = Article.objects.filter(feed__isnull=False).select_related("feed")
     context = _build_article_list_context(request, base_qs)
@@ -357,6 +392,8 @@ def settings_view(request, tab="feeds"):
             if form.is_valid():
                 try:
                     new_feed = form.save(commit=False)
+                    if not new_feed.name:
+                        new_feed.name = fetch_feed_title(new_feed.url) or urlparse(new_feed.url).netloc
                     max_order = (
                         Feed.objects.order_by("-display_order")
                         .values_list("display_order", flat=True)
@@ -509,6 +546,7 @@ def reader_view(request, article_id):
     )
 
 
+@login_required
 def feed_articles_view(request, feed_id):
     feed = get_object_or_404(Feed, id=feed_id)
     base_qs = Article.objects.filter(feed=feed)
@@ -525,6 +563,7 @@ def feed_articles_view(request, feed_id):
     return render(request, "rss/feed_articles.html", context)
 
 
+@login_required
 def article_state_toggle_view(request, article_id, state_field):
     if request.method != "POST":
         return redirect("rss-dashboard")
@@ -547,10 +586,6 @@ def article_state_toggle_view(request, article_id, state_field):
     if redirect_params:
         redirect_url = f"{redirect_url}?{urlencode(redirect_params)}"
 
-    if not request.user.is_authenticated:
-        messages.error(request, "Please log in to update article state.")
-        return redirect(redirect_url)
-
     allowed_fields = {"is_favorite", "is_read_later", "is_read"}
     if state_field not in allowed_fields:
         messages.error(request, "Invalid state action.")
@@ -567,12 +602,9 @@ def article_state_toggle_view(request, article_id, state_field):
     return redirect(redirect_url)
 
 
+@login_required
 def mark_all_read_view(request):
     if request.method != "POST":
-        return redirect("rss-dashboard")
-
-    if not request.user.is_authenticated:
-        messages.error(request, "Please log in to mark articles as read.")
         return redirect("rss-dashboard")
 
     feed_id = request.POST.get("feed_id", "").strip()
@@ -630,12 +662,22 @@ class FetchMetadataView(APIView):
         return Response(metadata, status=status.HTTP_200_OK)
 
 
+class FetchFeedTitleView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        url = request.data.get("url", "").strip()
+        if not url:
+            return Response({"title": ""}, status=status.HTTP_400_BAD_REQUEST)
+        title = fetch_feed_title(url)
+        return Response({"title": title}, status=status.HTTP_200_OK)
+
+
 # ── Bookmark views ──────────────────────────────────────
 
 
+@login_required
 def bookmark_list_view(request):
-    if not request.user.is_authenticated:
-        return redirect("rss-dashboard")
 
     query = request.GET.get("q", "").strip()
     tag_slug = request.GET.get("tag", "").strip()
@@ -704,9 +746,8 @@ def _save_bookmark_tags(bookmark, tag_names_str, user):
     bookmark.tags.set(tags)
 
 
+@login_required
 def bookmark_add_view(request):
-    if not request.user.is_authenticated:
-        return redirect("rss-dashboard")
 
     if request.method == "POST":
         form = BookmarkForm(request.POST)
@@ -715,6 +756,15 @@ def bookmark_add_view(request):
             bookmark.user = request.user
             # Store thumbnail from hidden field
             bookmark.thumbnail_url = request.POST.get("thumbnail_url", "")
+            # Auto-fetch title if not provided
+            if not bookmark.title.strip():
+                from .utils import fetch_url_metadata
+                meta = fetch_url_metadata(bookmark.url)
+                bookmark.title = meta.get("title", "") or bookmark.url
+                if not bookmark.description.strip() and meta.get("description"):
+                    bookmark.description = meta["description"]
+                if not bookmark.thumbnail_url and meta.get("thumbnail_url"):
+                    bookmark.thumbnail_url = meta["thumbnail_url"]
             # Link to source article if provided
             source_id = request.POST.get("source_article_id", "").strip()
             if source_id:
@@ -748,9 +798,8 @@ def bookmark_add_view(request):
     )
 
 
+@login_required
 def bookmark_edit_view(request, bookmark_id):
-    if not request.user.is_authenticated:
-        return redirect("rss-dashboard")
 
     bookmark = get_object_or_404(Bookmark, id=bookmark_id, user=request.user)
 
@@ -783,9 +832,8 @@ def bookmark_edit_view(request, bookmark_id):
     )
 
 
+@login_required
 def bookmark_delete_view(request, bookmark_id):
-    if not request.user.is_authenticated:
-        return redirect("rss-dashboard")
     if request.method != "POST":
         return redirect("bookmark-list")
     bookmark = get_object_or_404(Bookmark, id=bookmark_id, user=request.user)
@@ -794,10 +842,9 @@ def bookmark_delete_view(request, bookmark_id):
     return redirect("bookmark-list")
 
 
+@login_required
 def bookmark_from_article_view(request, article_id):
     """Pre-fill bookmark form from an RSS article."""
-    if not request.user.is_authenticated:
-        return redirect("rss-dashboard")
 
     article = get_object_or_404(Article, id=article_id)
 
@@ -832,9 +879,8 @@ def bookmark_from_article_view(request, article_id):
 # ── Tag views ───────────────────────────────────────────
 
 
+@login_required
 def tag_list_view(request):
-    if not request.user.is_authenticated:
-        return redirect("rss-dashboard")
 
     if request.method == "POST":
         form = TagForm(request.POST)
@@ -871,9 +917,8 @@ def tag_list_view(request):
     )
 
 
+@login_required
 def tag_update_view(request, tag_id):
-    if not request.user.is_authenticated:
-        return redirect("rss-dashboard")
     if request.method != "POST":
         return redirect("settings-tags")
 

@@ -58,6 +58,51 @@ def _is_private_ip(hostname: str) -> bool:
     return False
 
 
+def fetch_feed_title(url: str) -> str:
+    """Fetch an RSS/Atom feed URL and extract the feed title."""
+    import xml.etree.ElementTree as ET
+
+    try:
+        parts = urlsplit(url)
+        if parts.scheme not in ("http", "https"):
+            return ""
+        if _is_private_ip(parts.hostname or ""):
+            return ""
+
+        resp = requests.get(
+            url,
+            timeout=8,
+            headers={"User-Agent": "Feedee/1.0 (feed title fetcher)"},
+            allow_redirects=True,
+        )
+        resp.raise_for_status()
+
+        root = ET.fromstring(resp.content)
+
+        # RSS 2.0: <rss><channel><title>
+        channel = root.find("channel")
+        if channel is not None:
+            title_el = channel.find("title")
+            if title_el is not None and title_el.text:
+                return title_el.text.strip()
+
+        # Atom: <feed xmlns="http://www.w3.org/2005/Atom"><title>
+        atom_ns = "http://www.w3.org/2005/Atom"
+        title_el = root.find(f"{{{atom_ns}}}title")
+        if title_el is not None and title_el.text:
+            return title_el.text.strip()
+
+        # Fallback: first <title> anywhere
+        title_el = root.find(".//title")
+        if title_el is not None and title_el.text:
+            return title_el.text.strip()
+
+    except Exception:
+        logger.debug("Failed to fetch feed title for %s", url, exc_info=True)
+
+    return ""
+
+
 def fetch_url_metadata(url: str) -> dict:
     """
     Fetch a URL and extract title, description, and OGP thumbnail.

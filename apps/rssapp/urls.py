@@ -14,6 +14,7 @@ from .views import (
     mark_all_read_view,
     reader_view,
     feed_articles_view,
+    refresh_feeds_view,
     settings_view,
     tag_list_view,
     tag_update_view,
@@ -42,6 +43,7 @@ urlpatterns = [
         name="tag-list",
     ),
     # Feeds
+    path("feeds/refresh/", refresh_feeds_view, name="refresh-feeds"),
     path("feeds/<int:feed_id>/", feed_articles_view, name="feed-articles"),
     path("feeds/<int:feed_id>/update/", feed_update_view, name="feed-update"),
     # Articles

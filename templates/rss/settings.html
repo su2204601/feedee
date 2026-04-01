@@ -46,28 +46,40 @@
     {# ══════════════════════════════════════════════════ #}
     {% if active_tab == "feeds" %}
 
-    <p class="text-sm text-gray-500 mb-4">{{ feeds|length }} feed{{ feeds|length|pluralize }}</p>
+    <div class="flex items-center justify-between mb-4">
+        <p class="text-sm text-gray-500">{{ feeds|length }} feed{{ feeds|length|pluralize }}</p>
+        <form method="post" action="{% url 'refresh-feeds' %}">
+            {% csrf_token %}
+            <button type="submit"
+                    class="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-sm font-medium text-gray-600 px-4 py-2 transition-colors shadow-sm">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 4v5h5M20 20v-5h-5"/><path stroke-linecap="round" d="M20.49 9A9 9 0 005.64 5.64L4 4m16 16l-1.64-1.64A9 9 0 014.51 15"/></svg>
+                Update feeds
+            </button>
+        </form>
+    </div>
 
     {# ── Add Feed ── #}
     <section class="rounded-xl bg-white border border-gray-200 shadow-soft p-5 mb-6">
-        <form method="post" class="flex flex-wrap items-end gap-3">
+        <form method="post" class="space-y-3">
             {% csrf_token %}
-            <div class="flex-1 min-w-[160px]">
-                <label class="block text-xs font-medium text-gray-500 mb-1">Name</label>
+            <div class="flex flex-wrap items-end gap-3">
+                <div class="flex-[2] min-w-[200px]">
+                    <label class="block text-xs font-medium text-gray-500 mb-1">Feed URL <span class="text-rose-400">*</span></label>
+                    {{ feed_form.url }}
+                </div>
+                <div class="min-w-[120px]">
+                    <label class="block text-xs font-medium text-gray-500 mb-1">Category</label>
+                    {{ feed_form.category }}
+                </div>
+                <button class="rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium px-5 py-2.5 transition-colors shadow-sm whitespace-nowrap">
+                    <svg class="w-4 h-4 inline -mt-0.5 mr-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M12 4v16m8-8H4"/></svg>
+                    Add feed
+                </button>
+            </div>
+            <div class="max-w-xs">
+                <label class="block text-xs font-medium text-gray-500 mb-1">Name <span class="text-gray-400 font-normal">(optional – auto-detected from feed)</span></label>
                 {{ feed_form.name }}
             </div>
-            <div class="flex-[2] min-w-[200px]">
-                <label class="block text-xs font-medium text-gray-500 mb-1">Feed URL</label>
-                {{ feed_form.url }}
-            </div>
-            <div class="min-w-[120px]">
-                <label class="block text-xs font-medium text-gray-500 mb-1">Category</label>
-                {{ feed_form.category }}
-            </div>
-            <button class="rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium px-5 py-2.5 transition-colors shadow-sm whitespace-nowrap">
-                <svg class="w-4 h-4 inline -mt-0.5 mr-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M12 4v16m8-8H4"/></svg>
-                Add feed
-            </button>
         </form>
     </section>
 
@@ -167,20 +179,22 @@
 
     {# ── Add Tag ── #}
     <section class="rounded-xl bg-white border border-gray-200 shadow-soft p-5 mb-6">
-        <form method="post" class="flex flex-wrap items-end gap-3">
+        <form method="post" class="space-y-3">
             {% csrf_token %}
-            <div class="flex-1 min-w-[160px]">
-                <label class="block text-xs font-medium text-gray-500 mb-1">Name</label>
-                {{ tag_form.name }}
+            <div class="flex flex-wrap items-end gap-3">
+                <div class="flex-1 min-w-[160px]">
+                    <label class="block text-xs font-medium text-gray-500 mb-1">Name</label>
+                    {{ tag_form.name }}
+                </div>
+                <button class="rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium px-5 py-2.5 transition-colors shadow-sm whitespace-nowrap">
+                    <svg class="w-4 h-4 inline -mt-0.5 mr-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M12 4v16m8-8H4"/></svg>
+                    Add tag
+                </button>
             </div>
-            <div class="min-w-[80px]">
+            <div>
                 <label class="block text-xs font-medium text-gray-500 mb-1">Color</label>
                 {{ tag_form.color }}
             </div>
-            <button class="rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium px-5 py-2.5 transition-colors shadow-sm whitespace-nowrap">
-                <svg class="w-4 h-4 inline -mt-0.5 mr-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M12 4v16m8-8H4"/></svg>
-                Add tag
-            </button>
         </form>
     </section>
 
@@ -210,7 +224,7 @@
                             <label class="block text-xs font-medium text-gray-500 mb-1">Name</label>
                             {{ form.name }}
                         </div>
-                        <div class="min-w-[80px]">
+                        <div>
                             <label class="block text-xs font-medium text-gray-500 mb-1">Color</label>
                             {{ form.color }}
                         </div>
@@ -374,6 +388,36 @@
             status.textContent = "Could not save order.";
             btn.disabled = false;
         }
+    });
+})();
+
+// Auto-fetch feed title when URL field loses focus
+(function() {
+    var urlInput = document.getElementById("feed-url");
+    var nameInput = document.getElementById("feed-name");
+    if (!urlInput || !nameInput) return;
+
+    var timer = null;
+    urlInput.addEventListener("blur", function() {
+        var url = urlInput.value.trim();
+        if (!url || nameInput.value.trim()) return;
+        nameInput.setAttribute("placeholder", "Fetching title...");
+        var csrf = document.querySelector("input[name='csrfmiddlewaretoken']");
+        fetch("{% url 'fetch-feed-title' %}", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "X-CSRFToken": csrf ? csrf.value : "" },
+            body: JSON.stringify({ url: url })
+        })
+        .then(function(res) { return res.ok ? res.json() : Promise.reject(); })
+        .then(function(data) {
+            if (data.title && !nameInput.value.trim()) {
+                nameInput.value = data.title;
+            }
+            nameInput.setAttribute("placeholder", "Auto-detected from feed");
+        })
+        .catch(function() {
+            nameInput.setAttribute("placeholder", "Auto-detected from feed");
+        });
     });
 })();
 </script>

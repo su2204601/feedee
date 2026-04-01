@@ -23,14 +23,25 @@
             <div class="space-y-4">
                 {# ── URL ── #}
                 <div>
-                    <label class="block text-xs font-medium text-gray-500 mb-1">URL</label>
-                    {{ form.url }}
+                    <div class="flex items-end gap-2">
+                        <div class="flex-1">
+                            <label class="block text-xs font-medium text-gray-500 mb-1">URL <span class="text-rose-400">*</span></label>
+                            {{ form.url }}
+                        </div>
+                        {% if edit_mode %}
+                        <button type="button" id="refetch-btn"
+                                class="rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-xs font-medium text-gray-600 px-3 py-2.5 transition-colors shadow-sm whitespace-nowrap flex items-center gap-1.5">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 4v5h5M20 20v-5h-5"/><path stroke-linecap="round" d="M20.49 9A9 9 0 005.64 5.64L4 4m16 16l-1.64-1.64A9 9 0 014.51 15"/></svg>
+                            Re-fetch
+                        </button>
+                        {% endif %}
+                    </div>
                     <p id="fetch-status" class="mt-1 text-xs text-gray-400 hidden"></p>
                 </div>
 
                 {# ── Title ── #}
                 <div>
-                    <label class="block text-xs font-medium text-gray-500 mb-1">Title</label>
+                    <label class="block text-xs font-medium text-gray-500 mb-1">Title <span class="text-gray-400 font-normal">(optional – auto-detected from URL)</span></label>
                     {{ form.title }}
                 </div>
 
@@ -91,34 +102,43 @@
     var fetchStatus = document.getElementById('fetch-status');
     var csrf = document.querySelector('input[name="csrfmiddlewaretoken"]');
 
-    if (urlInput && !titleInput.value.trim()) {
-        urlInput.addEventListener('blur', async function() {
-            var url = urlInput.value.trim();
-            if (!url) return;
-            fetchStatus.textContent = 'Fetching metadata…';
-            fetchStatus.classList.remove('hidden');
-            try {
-                var res = await fetch('{% url "fetch-metadata" %}', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrf ? csrf.value : ''},
-                    body: JSON.stringify({url: url})
-                });
-                if (!res.ok) throw new Error();
-                var data = await res.json();
-                if (data.title && !titleInput.value.trim()) titleInput.value = data.title;
-                if (data.description && !descInput.value.trim()) descInput.value = data.description;
-                if (data.thumbnail_url) {
-                    thumbInput.value = data.thumbnail_url;
-                    thumbImg.src = data.thumbnail_url;
-                    thumbPreview.classList.remove('hidden');
-                }
-                fetchStatus.textContent = 'Metadata loaded.';
-                setTimeout(function() { fetchStatus.classList.add('hidden'); }, 2000);
-            } catch(e) {
-                fetchStatus.textContent = 'Could not fetch metadata.';
-                setTimeout(function() { fetchStatus.classList.add('hidden'); }, 3000);
+    async function fetchMetadata(overwrite) {
+        var url = urlInput.value.trim();
+        if (!url) return;
+        fetchStatus.textContent = 'Fetching metadata…';
+        fetchStatus.classList.remove('hidden');
+        try {
+            var res = await fetch('{% url "fetch-metadata" %}', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrf ? csrf.value : ''},
+                body: JSON.stringify({url: url})
+            });
+            if (!res.ok) throw new Error();
+            var data = await res.json();
+            if (data.title && (overwrite || !titleInput.value.trim())) titleInput.value = data.title;
+            if (data.description && (overwrite || !descInput.value.trim())) descInput.value = data.description;
+            if (data.thumbnail_url) {
+                thumbInput.value = data.thumbnail_url;
+                thumbImg.src = data.thumbnail_url;
+                thumbPreview.classList.remove('hidden');
             }
-        });
+            fetchStatus.textContent = 'Metadata loaded.';
+            setTimeout(function() { fetchStatus.classList.add('hidden'); }, 2000);
+        } catch(e) {
+            fetchStatus.textContent = 'Could not fetch metadata.';
+            setTimeout(function() { fetchStatus.classList.add('hidden'); }, 3000);
+        }
+    }
+
+    // Auto-fetch on URL blur (add mode only, when title is empty)
+    if (urlInput && !titleInput.value.trim()) {
+        urlInput.addEventListener('blur', function() { fetchMetadata(false); });
+    }
+
+    // Re-fetch button (edit mode)
+    var refetchBtn = document.getElementById('refetch-btn');
+    if (refetchBtn) {
+        refetchBtn.addEventListener('click', function() { fetchMetadata(true); });
     }
 
     // Tag pill click to toggle in comma-separated field

@@ -2,7 +2,8 @@
        prod-up prod-down prod-logs prod-build prod-migrate prod-shell \
        backup backup-dev backup-prod restore-dev restore-prod \
        lint fmt clean \
-       fe-install fe-dev fe-build
+       fe-install fe-dev fe-build \
+       colima-start colima-stop colima-status
 
 # -------------------------------------------------------------------
 # Variables
@@ -127,6 +128,18 @@ fe-dev: ## Start Vite dev server (HMR)
 
 fe-build: ## Build frontend for production
 	npm run build
+
+# ===================================================================
+#  Colima (Docker runtime for macOS)
+# ===================================================================
+colima-start: ## Start Colima
+	colima start
+
+colima-stop: ## Stop Colima
+	colima stop
+
+colima-status: ## Show Colima status
+	colima status
 
 # ===================================================================
 #  Utilities

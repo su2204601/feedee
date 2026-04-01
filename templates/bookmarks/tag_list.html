@@ -21,20 +21,22 @@
 
     {# ── Add Tag ────────────────────────────────────── #}
     <section class="rounded-xl bg-white border border-gray-200 shadow-soft p-5 mb-6">
-        <form method="post" class="flex flex-wrap items-end gap-3">
+        <form method="post" class="space-y-3">
             {% csrf_token %}
-            <div class="flex-1 min-w-[160px]">
-                <label class="block text-xs font-medium text-gray-500 mb-1">Name</label>
-                {{ tag_form.name }}
+            <div class="flex flex-wrap items-end gap-3">
+                <div class="flex-1 min-w-[160px]">
+                    <label class="block text-xs font-medium text-gray-500 mb-1">Name</label>
+                    {{ tag_form.name }}
+                </div>
+                <button class="rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium px-5 py-2.5 transition-colors shadow-sm whitespace-nowrap">
+                    <svg class="w-4 h-4 inline -mt-0.5 mr-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M12 4v16m8-8H4"/></svg>
+                    Add tag
+                </button>
             </div>
-            <div class="min-w-[80px]">
+            <div>
                 <label class="block text-xs font-medium text-gray-500 mb-1">Color</label>
                 {{ tag_form.color }}
             </div>
-            <button class="rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium px-5 py-2.5 transition-colors shadow-sm whitespace-nowrap">
-                <svg class="w-4 h-4 inline -mt-0.5 mr-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M12 4v16m8-8H4"/></svg>
-                Add tag
-            </button>
         </form>
     </section>
 
@@ -66,7 +68,7 @@
                             <label class="block text-xs font-medium text-gray-500 mb-1">Name</label>
                             {{ form.name }}
                         </div>
-                        <div class="min-w-[80px]">
+                        <div>
                             <label class="block text-xs font-medium text-gray-500 mb-1">Color</label>
                             {{ form.color }}
                         </div>

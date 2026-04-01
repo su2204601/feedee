@@ -33,3 +33,12 @@ static/dist/
 # IDE
 .idea/
 .vscode/
+
+# OS
+.DS_Store
+
+# Images
+*.png
+*.jpg
+*.jpeg
+*.gif

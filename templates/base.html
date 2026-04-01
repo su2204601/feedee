@@ -117,7 +117,12 @@
 
     {# ── Feeds Section ──────────────────────────────── #}
     <div class="flex-1 overflow-y-auto px-3 pt-3 pb-2">
-        <p class="px-3 mb-2 text-[11px] font-semibold uppercase tracking-wider text-gray-400">Feeds</p>
+        <div class="flex items-center justify-between px-3 mb-2">
+            <p class="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Feeds</p>
+            <a href="{% url 'settings-feeds' %}" class="p-0.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors" title="Add feed">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M12 4v16m8-8H4"/></svg>
+            </a>
+        </div>
         {% for group in sidebar_groups %}
             <div class="mb-3 sidebar-category" data-category="{{ group.name }}">
                 {% if group.name != "Uncategorized" %}
@@ -138,7 +143,10 @@
                 </div>
             </div>
         {% empty %}
-            <p class="px-3 text-sm text-gray-400">No feeds yet</p>
+            <a href="{% url 'settings-feeds' %}" class="flex items-center gap-2 px-3 py-2 text-sm text-gray-400 hover:text-brand-600 transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M12 4v16m8-8H4"/></svg>
+                Add your first feed
+            </a>
         {% endfor %}
     </div>
     <div class="border-t border-gray-100 mx-3"></div>

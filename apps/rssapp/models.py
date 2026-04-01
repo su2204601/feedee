@@ -171,7 +171,7 @@ class Tag(models.Model):
 
 class Bookmark(models.Model):
     url = models.URLField(max_length=2048)
-    title = models.CharField(max_length=500)
+    title = models.CharField(max_length=500, blank=True, default="")
     description = models.TextField(blank=True, default="")
     thumbnail_url = models.URLField(max_length=2048, blank=True, default="")
     user = models.ForeignKey(

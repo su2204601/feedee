@@ -5,6 +5,7 @@ from .views import (
     ArticleUserStateView,
     FeedListView,
     FeedReorderView,
+    FetchFeedTitleView,
     FetchMetadataView,
 )
 
@@ -19,5 +20,8 @@ urlpatterns = [
     ),
     path(
         "bookmarks/fetch-metadata/", FetchMetadataView.as_view(), name="fetch-metadata"
+    ),
+    path(
+        "feeds/fetch-title/", FetchFeedTitleView.as_view(), name="fetch-feed-title"
     ),
 ]

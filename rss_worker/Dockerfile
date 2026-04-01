@@ -2,7 +2,8 @@
 FROM golang:1.22-alpine AS builder
 
 WORKDIR /build
-COPY go.mod ./
+COPY go.mod go.sum ./
+RUN go mod download
 COPY rss_worker/main.go ./rss_worker/
 
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /build/rss-worker ./rss_worker

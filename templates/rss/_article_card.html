@@ -1,3 +1,4 @@
+{% load timesince_en %}
 {# Reusable article card with inline state toggle buttons #}
 {# Expects: article (dict with id, title, link, domain, feed_name, summary, image_url, published_at, created_at, is_favorite, is_read_later, is_read) #}
 <div class="article-card group flex items-start gap-3 rounded-lg border border-transparent hover:border-gray-200 hover:bg-white hover:shadow-soft p-3 -mx-1 transition-all {% if article.is_read %}is-read{% endif %}"
@@ -19,7 +20,7 @@
                 <span class="font-medium text-gray-500">{{ article.feed_name }}</span>
                 <span>&middot;</span>
             {% endif %}
-            <time datetime="{{ article.published_at|default:article.created_at|date:'c' }}" title="{{ article.published_at|default:article.created_at|date:'Y-m-d H:i' }}">{{ article.published_at|default:article.created_at|timesince }} ago</time>
+            <time datetime="{{ article.published_at|default:article.created_at|date:'c' }}" title="{{ article.published_at|default:article.created_at|date:'Y-m-d H:i' }}">{{ article.published_at|default:article.created_at|timesince_en }} ago</time>
             <span>&middot;</span>
             <span>{{ article.domain }}</span>
         </div>

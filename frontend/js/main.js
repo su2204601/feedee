@@ -425,3 +425,39 @@ import "../css/main.css";
     });
   });
 })();
+
+// ── Sidebar mode switcher (Phase 2) ────────────────────────
+(function () {
+  var rssSidebar = document.getElementById("sidebar-rss");
+  var bookmarkSidebar = document.getElementById("sidebar-bookmark");
+
+  if (!rssSidebar || !bookmarkSidebar) return;
+
+  /**
+   * Switch between RSS and Bookmark sidebar modes
+   * @param {string} mode - 'rss' or 'bookmark'
+   */
+  function switchSidebarMode(mode) {
+    if (mode === "rss") {
+      rssSidebar.classList.remove("hidden");
+      bookmarkSidebar.classList.add("hidden");
+    } else if (mode === "bookmark") {
+      rssSidebar.classList.add("hidden");
+      bookmarkSidebar.classList.remove("hidden");
+    }
+  }
+
+  // Listen to app switcher clicks
+  var appOptions = document.querySelectorAll(".data-app-option");
+  appOptions.forEach(function (option) {
+    option.addEventListener("click", function (e) {
+      var targetApp = e.currentTarget.dataset.app;
+      // Switch sidebar immediately before navigation
+      switchSidebarMode(targetApp);
+    });
+  });
+
+  // Initialize on page load based on body data-current-app
+  var initialApp = document.body.dataset.currentApp || "rss";
+  switchSidebarMode(initialApp);
+})();

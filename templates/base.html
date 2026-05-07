@@ -54,10 +54,12 @@
         </button>
     </div>
 
-    {# ===== FEEDS SIDEBAR (RSS App) ===== #}
-    {% if active_app == 'rss' or current_page == 'overview' or current_page == 'feeds' or current_page == 'feed-articles' %}
+    {# ── Sidebar Content (Mode-Switched) ──────────────── #}
+    <div class="flex-1 flex flex-col overflow-hidden" id="sidebar-content">
 
-    <nav class="px-3 pt-4 pb-2 space-y-0.5 flex-shrink-0">
+        {# ===== FEEDS SIDEBAR (RSS App) ===== #}
+        <div id="sidebar-rss" class="flex-1 flex flex-col overflow-hidden {% if active_app != 'rss' and current_page not in 'overview,feeds,feed-articles' %}hidden{% endif %}">
+            <nav class="px-3 pt-4 pb-2 space-y-0.5 flex-shrink-0">
         <p class="px-3 mb-2 text-[11px] font-semibold uppercase tracking-wider text-gray-400">Feeds</p>
         <a href="{% url 'feeds-page' %}"
            class="sidebar-link flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-gray-700 {% if current_page == 'feeds' and state_filter == 'all' %}active{% endif %}">
@@ -104,11 +106,13 @@
               class="sidebar-link flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-gray-700 {% if current_page == 'settings' and active_tab == 'feeds' or current_page == 'settings' and active_tab == 'account' %}active{% endif %}">
                     <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.573-1.066z"/><path stroke-linecap="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                         Settings
-        </a>
-    </div>
+            </a>
+        </div>
+        </div>
+        {# End RSS Sidebar #}
 
-    {# ===== BOOKMARKS SIDEBAR (Bookmark App) ===== #}
-    {% elif active_app == 'bookmark' or current_page == 'bookmarks' %}
+        {# ===== BOOKMARKS SIDEBAR (Bookmark App) ===== #}
+        <div id="sidebar-bookmark" class="flex-1 flex flex-col overflow-hidden {% if active_app != 'bookmark' and current_page != 'bookmarks' %}hidden{% endif %}">
 
     {% if request.user.is_authenticated %}
     <div class="flex-1 overflow-y-auto px-3 pt-4 pb-2">
@@ -169,11 +173,19 @@
             <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.573-1.066z"/><path stroke-linecap="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
             Settings
         </a>
-    </div>
-    {% endif %}
+        </div>
+        {% endif %}
+        </div>
+        {# End Bookmark Sidebar #}
 
-    {# ===== FALLBACK SIDEBAR ===== #}
+    </div>
+    {# End Sidebar Content #}
+
+    {# ===== UNIFIED SETTINGS LINK ===== #}
+    {% if active_app == 'rss' or active_app == 'bookmark' %}
+    {# Settings link is included within each sidebar mode above #}
     {% else %}
+    {# Fallback settings for other pages #}
 
     <nav class="px-3 pt-4 pb-2 space-y-0.5 flex-shrink-0">
         <p class="px-3 mb-2 text-[11px] font-semibold uppercase tracking-wider text-gray-400">Navigation</p>
@@ -205,7 +217,6 @@
         </a>
         {% endif %}
     </div>
-
     {% endif %}
 
 </aside>

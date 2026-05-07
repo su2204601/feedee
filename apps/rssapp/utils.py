@@ -147,7 +147,13 @@ def discover_feed_url(url: str) -> dict:
     """Resolve a homepage or feed URL to a concrete RSS/Atom feed URL."""
     cleaned_url = (url or "").strip()
     if not cleaned_url:
-        return {"feed_url": "", "title": "", "discovered": False}
+        return {
+            "feed_url": "",
+            "title": "",
+            "discovered": False,
+            "error": "EMPTY_URL",
+            "error_detail": "Please enter a URL.",
+        }
 
     response = _fetch_external_response(
         cleaned_url,
@@ -155,7 +161,32 @@ def discover_feed_url(url: str) -> dict:
         allow_non_html=True,
     )
     if response is None:
-        return {"feed_url": "", "title": "", "discovered": False}
+        # Determine the specific reason for failure
+        parts = urlsplit(cleaned_url)
+        if parts.scheme not in ("http", "https"):
+            return {
+                "feed_url": "",
+                "title": "",
+                "discovered": False,
+                "error": "INVALID_URL",
+                "error_detail": "URL must start with http:// or https://.",
+            }
+        if _is_private_ip(parts.hostname or ""):
+            return {
+                "feed_url": "",
+                "title": "",
+                "discovered": False,
+                "error": "PRIVATE_IP",
+                "error_detail": "Cannot access private or local networks for security reasons.",
+            }
+        # Network error or HTTP error
+        return {
+            "feed_url": "",
+            "title": "",
+            "discovered": False,
+            "error": "NETWORK_ERROR",
+            "error_detail": "Could not connect to the website. Please check the URL and try again.",
+        }
 
     if _looks_like_feed_response(response):
         return {
@@ -163,6 +194,8 @@ def discover_feed_url(url: str) -> dict:
             "title": _extract_feed_title(response.text)
             or urlsplit(response.url).netloc,
             "discovered": response.url != cleaned_url,
+            "error": "",
+            "error_detail": "",
         }
 
     soup = BeautifulSoup(response.text, "html.parser")
@@ -206,6 +239,8 @@ def discover_feed_url(url: str) -> dict:
                 "feed_url": candidate,
                 "title": page_title,
                 "discovered": True,
+                "error": "",
+                "error_detail": "",
             }
 
         candidate_response = _fetch_external_response(
@@ -221,9 +256,17 @@ def discover_feed_url(url: str) -> dict:
                 "feed_url": candidate_response.url,
                 "title": _extract_feed_title(candidate_response.text) or page_title,
                 "discovered": True,
+                "error": "",
+                "error_detail": "",
             }
 
-    return {"feed_url": "", "title": page_title, "discovered": False}
+    return {
+        "feed_url": "",
+        "title": page_title,
+        "discovered": False,
+        "error": "NO_FEED_FOUND",
+        "error_detail": "No RSS or Atom feed found at this URL. Try the homepage or look for a feed link on the website.",
+    }
 
 
 def _extract_content_with_bs4(html: str, url: str) -> str:

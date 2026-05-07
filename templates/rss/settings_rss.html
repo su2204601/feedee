@@ -26,25 +26,55 @@
     </div>
 
     <section class="rounded-xl bg-white border border-gray-200 shadow-soft p-5 mb-6 space-y-4">
-        <form method="post" class="flex flex-wrap items-end gap-3">
+        <form method="post" class="space-y-4">
             {% csrf_token %}
             <input type="hidden" name="form_action" value="add_feed">
-            <div class="flex-1 min-w-[160px]">
-                <label class="block text-xs font-medium text-gray-500 mb-1">Name</label>
-                {{ feed_form.name }}
+
+            <div class="flex flex-wrap items-end gap-3">
+                <div class="flex-1 min-w-[160px]">
+                    <label class="block text-xs font-medium text-gray-500 mb-1">Name</label>
+                    {{ feed_form.name }}
+                </div>
+                <div class="flex-[2] min-w-[200px]">
+                    <label class="block text-xs font-medium text-gray-500 mb-1">Website or feed URL</label>
+                    {{ feed_form.url }}
+                </div>
+                <div class="min-w-[120px]">
+                    <label class="block text-xs font-medium text-gray-500 mb-1">Group</label>
+                    {{ feed_form.category }}
+                </div>
+                <button class="rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium px-5 py-2.5 transition-colors shadow-sm whitespace-nowrap">
+                    <svg class="w-4 h-4 inline -mt-0.5 mr-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M12 4v16m8-8H4"/></svg>
+                    Add feed
+                </button>
             </div>
-            <div class="flex-[2] min-w-[200px]">
-                <label class="block text-xs font-medium text-gray-500 mb-1">Website or feed URL</label>
-                {{ feed_form.url }}
+
+            {% if feed_form.errors %}
+            <div class="rounded-lg bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-700">
+                {% for field, errors in feed_form.errors.items %}
+                    {% if field == 'url' %}
+                        <p class="font-medium">Feed URL Error:</p>
+                        {% for error in errors %}
+                            <p class="mt-1">{{ error }}</p>
+                        {% endfor %}
+                    {% elif field == 'name' %}
+                        <p class="font-medium">Name Error:</p>
+                        {% for error in errors %}
+                            <p class="mt-1">{{ error }}</p>
+                        {% endfor %}
+                    {% else %}
+                        {% for error in errors %}
+                            <p>{{ error }}</p>
+                        {% endfor %}
+                    {% endif %}
+                {% endfor %}
+
+                <p class="mt-3 text-xs text-rose-600">
+                    <strong>Common solutions:</strong>
+                    Try the homepage URL instead of a specific page, or look for a feed icon/link on the website.
+                </p>
             </div>
-            <div class="min-w-[120px]">
-                <label class="block text-xs font-medium text-gray-500 mb-1">Group</label>
-                {{ feed_form.category }}
-            </div>
-            <button class="rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium px-5 py-2.5 transition-colors shadow-sm whitespace-nowrap">
-                <svg class="w-4 h-4 inline -mt-0.5 mr-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M12 4v16m8-8H4"/></svg>
-                Add feed
-            </button>
+            {% endif %}
         </form>
 
         <div class="border-t border-gray-100 pt-4">

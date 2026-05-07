@@ -31,6 +31,8 @@ class FeedCreateForm(forms.ModelForm):
         self.discovered_feed_url = ""
         self.discovered_title = ""
         self.discovery_used = False
+        self.discovery_error = ""
+        self.discovery_error_detail = ""
 
     def clean_url(self):
         raw_url = (self.cleaned_data.get("url") or "").strip()
@@ -39,11 +41,12 @@ class FeedCreateForm(forms.ModelForm):
         self.discovered_feed_url = feed_url
         self.discovered_title = (discovered.get("title") or "").strip()
         self.discovery_used = bool(feed_url and feed_url != raw_url)
+        self.discovery_error = discovered.get("error", "")
+        self.discovery_error_detail = discovered.get("error_detail", "")
 
         if not feed_url:
-            raise forms.ValidationError(
-                "Could not find an RSS or Atom feed at that URL."
-            )
+            error_msg = self.discovery_error_detail or "Could not find an RSS or Atom feed at that URL."
+            raise forms.ValidationError(error_msg)
         return feed_url
 
     def clean(self):

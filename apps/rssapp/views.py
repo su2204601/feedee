@@ -771,12 +771,12 @@ def rss_settings_view(request):
                 if getattr(form, "discovery_used", False):
                     messages.success(
                         request,
-                        f"Feed added from the discovered RSS URL: {new_feed.url}",
+                        f"✓ Feed added: {new_feed.name}. Automatically discovered feed URL from the website. Articles will appear shortly.",
                     )
                 else:
                     messages.success(
                         request,
-                        "Feed added. Articles are being fetched in the background — they'll appear shortly.",
+                        f"✓ Feed added: {new_feed.name}. Fetching articles in the background...",
                     )
                 return redirect("settings-feeds")
             except IntegrityError:
@@ -785,6 +785,12 @@ def rss_settings_view(request):
             for field_errors in form.errors.values():
                 for error in field_errors:
                     messages.error(request, error)
+
+            # Log discovery errors for debugging
+            if hasattr(form, 'discovery_error') and form.discovery_error:
+                logger.warning(
+                    f"Feed discovery failed: {form.discovery_error} - URL: {request.POST.get('url', 'N/A')}"
+                )
     else:
         form = FeedCreateForm()
 

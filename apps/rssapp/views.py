@@ -746,7 +746,7 @@ def settings_view(request, tab="feeds"):
     """Unified settings page with tabs: feeds, tags, categories, account."""
     valid_tabs = ["feeds", "tags", "categories", "account"]
     if tab not in valid_tabs:
-        return redirect("settings-unified", tab="feeds")
+        return redirect("settings-unified", permanent=False)
 
     context = {"current_page": "settings", "active_tab": tab}
 
@@ -775,7 +775,7 @@ def settings_view(request, tab="feeds"):
                             request,
                             f"✓ Feed added: {new_feed.name}. Fetching articles in the background...",
                         )
-                    return redirect("settings-unified", tab="feeds")
+                    return redirect("/settings/feeds/")
                 except IntegrityError:
                     messages.error(request, "This feed URL is already subscribed.")
             else:
@@ -815,7 +815,7 @@ def settings_view(request, tab="feeds"):
                 try:
                     category.save()
                     messages.success(request, f'Category "{category.name}" created.')
-                    return redirect("settings-unified", tab="categories")
+                    return redirect("/settings/categories/")
                 except IntegrityError:
                     messages.error(request, "A category with this name already exists.")
         else:
@@ -851,7 +851,7 @@ def settings_view(request, tab="feeds"):
                 try:
                     tag.save()
                     messages.success(request, f'Tag "{tag.name}" created.')
-                    return redirect("settings-unified", tab="tags")
+                    return redirect("/settings/tags/")
                 except IntegrityError:
                     messages.error(request, "A tag with this name already exists.")
         else:
@@ -884,7 +884,7 @@ def settings_view(request, tab="feeds"):
                 if profile_form.is_valid():
                     profile_form.save()
                     messages.success(request, "Preferences saved.")
-                    return redirect("settings-unified", tab="account")
+                    return redirect("/settings/account/")
             elif action == "password":
                 password_form = StyledPasswordChangeForm(request.user, request.POST)
                 if password_form.is_valid():
@@ -893,7 +893,7 @@ def settings_view(request, tab="feeds"):
 
                     update_session_auth_hash(request, password_form.user)
                     messages.success(request, "Password changed.")
-                    return redirect("settings-unified", tab="account")
+                    return redirect("/settings/account/")
 
         context.update({"profile_form": profile_form, "password_form": password_form})
 

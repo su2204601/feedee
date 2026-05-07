@@ -741,14 +741,163 @@ def feed_update_view(request, feed_id):
 
 
 @login_required
+@login_required
 def settings_view(request, tab="feeds"):
-    redirect_map = {
-        "feeds": "settings-feeds",
-        "categories": "settings-categories",
-        "tags": "settings-tags",
-        "account": "settings-account",
-    }
-    return redirect(redirect_map.get(tab, "settings-feeds"))
+    """Unified settings page with tabs: feeds, tags, categories, account."""
+    valid_tabs = ["feeds", "tags", "categories", "account"]
+    if tab not in valid_tabs:
+        return redirect("settings-unified", tab="feeds")
+
+    context = {"current_page": "settings", "active_tab": tab}
+
+    # ── Feeds Tab ──────────────────────────────────────
+    if tab == "feeds":
+        if request.method == "POST":
+            form = FeedCreateForm(request.POST)
+            if form.is_valid():
+                try:
+                    new_feed = form.save(commit=False)
+                    max_order = (
+                        Feed.objects.order_by("-display_order")
+                        .values_list("display_order", flat=True)
+                        .first()
+                    )
+                    new_feed.display_order = (max_order or 0) + 1
+                    new_feed.save()
+                    run_rss_worker()
+                    if getattr(form, "discovery_used", False):
+                        messages.success(
+                            request,
+                            f"✓ Feed added: {new_feed.name}. Automatically discovered feed URL from the website. Articles will appear shortly.",
+                        )
+                    else:
+                        messages.success(
+                            request,
+                            f"✓ Feed added: {new_feed.name}. Fetching articles in the background...",
+                        )
+                    return redirect("settings-unified", tab="feeds")
+                except IntegrityError:
+                    messages.error(request, "This feed URL is already subscribed.")
+            else:
+                for field_errors in form.errors.values():
+                    for error in field_errors:
+                        messages.error(request, error)
+
+                # Log discovery errors for debugging
+                if hasattr(form, 'discovery_error') and form.discovery_error:
+                    logger.warning(
+                        f"Feed discovery failed: {form.discovery_error} - URL: {request.POST.get('url', 'N/A')}"
+                    )
+        else:
+            form = FeedCreateForm()
+
+        feeds = (
+            Feed.objects.all()
+            .annotate(article_count=Count("articles"))
+            .order_by("display_order", "id")
+        )
+        feed_rows = [
+            {
+                "feed": feed,
+                "form": FeedUpdateForm(instance=feed, prefix=f"feed-{feed.id}"),
+            }
+            for feed in feeds
+        ]
+        context.update({"feed_form": form, "feeds": feeds, "feed_rows": feed_rows})
+
+    # ── Categories Tab ─────────────────────────────────
+    elif tab == "categories":
+        if request.method == "POST":
+            form = BookmarkCategoryForm(request.POST)
+            if form.is_valid():
+                category = form.save(commit=False)
+                category.user = request.user
+                try:
+                    category.save()
+                    messages.success(request, f'Category "{category.name}" created.')
+                    return redirect("settings-unified", tab="categories")
+                except IntegrityError:
+                    messages.error(request, "A category with this name already exists.")
+        else:
+            form = BookmarkCategoryForm()
+
+        categories = (
+            BookmarkCategory.objects.filter(user=request.user)
+            .annotate(bookmark_count=Count("bookmarks"))
+            .order_by("display_order", "name")
+        )
+        category_rows = [
+            {
+                "category": cat,
+                "form": BookmarkCategoryForm(instance=cat, prefix=f"cat-{cat.id}"),
+            }
+            for cat in categories
+        ]
+        context.update(
+            {
+                "category_form": form,
+                "categories": categories,
+                "category_rows": category_rows,
+            }
+        )
+
+    # ── Tags Tab ───────────────────────────────────────
+    elif tab == "tags":
+        if request.method == "POST":
+            form = TagForm(request.POST)
+            if form.is_valid():
+                tag = form.save(commit=False)
+                tag.user = request.user
+                try:
+                    tag.save()
+                    messages.success(request, f'Tag "{tag.name}" created.')
+                    return redirect("settings-unified", tab="tags")
+                except IntegrityError:
+                    messages.error(request, "A tag with this name already exists.")
+        else:
+            form = TagForm()
+
+        tags = Tag.objects.filter(user=request.user).annotate(
+            bookmark_count=Count("bookmarks")
+        )
+        tag_rows = [
+            {"tag": tag, "form": TagForm(instance=tag, prefix=f"tag-{tag.id}")}
+            for tag in tags
+        ]
+        context.update({"tag_form": form, "tags": tags, "tag_rows": tag_rows})
+
+    # ── Account Tab ────────────────────────────────────
+    elif tab == "account":
+        profile, _ = UserProfile.objects.get_or_create(user=request.user)
+        profile_form = UserProfileForm(instance=profile)
+        password_form = StyledPasswordChangeForm(request.user)
+
+        if request.method == "POST":
+            action = request.POST.get("form_action", "")
+            if action == "profile":
+                profile_payload = request.POST.copy()
+                for field in UserProfileForm.Meta.fields:
+                    if field not in profile_payload:
+                        profile_payload[field] = getattr(profile, field)
+
+                profile_form = UserProfileForm(profile_payload, instance=profile)
+                if profile_form.is_valid():
+                    profile_form.save()
+                    messages.success(request, "Preferences saved.")
+                    return redirect("settings-unified", tab="account")
+            elif action == "password":
+                password_form = StyledPasswordChangeForm(request.user, request.POST)
+                if password_form.is_valid():
+                    password_form.save()
+                    from django.contrib.auth import update_session_auth_hash
+
+                    update_session_auth_hash(request, password_form.user)
+                    messages.success(request, "Password changed.")
+                    return redirect("settings-unified", tab="account")
+
+        context.update({"profile_form": profile_form, "password_form": password_form})
+
+    return render(request, "rss/settings.html", context)
 
 
 @login_required

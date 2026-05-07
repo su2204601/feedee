@@ -33,32 +33,15 @@ urlpatterns = [
     ),
     path("read-later/", read_later_view, name="read-later"),
     path("favorites/", favorites_view, name="favorites"),
-    # Settings
-    path(
-        "settings/",
-        RedirectView.as_view(pattern_name="settings-feeds", permanent=True),
-    ),
-    path("settings/rss/", rss_settings_view, name="settings-feeds"),
-    path("settings/bookmarks/", bookmark_settings_view, name="settings-bookmarks"),
-    path(
-        "settings/categories/",
-        bookmark_settings_view,
-        name="settings-categories",
-        kwargs={"tab": "categories"},
-    ),
-    path(
-        "settings/tags/",
-        bookmark_settings_view,
-        name="settings-tags",
-        kwargs={"tab": "tags"},
-    ),
-    path(
-        "settings/account/",
-        account_settings_view,
-        name="settings-account",
-    ),
-    # Legacy tab-based settings route
-    path("settings/legacy/<str:tab>/", settings_view, name="settings-legacy"),
+    # Settings (Unified)
+    path("settings/", settings_view, name="settings-unified", kwargs={"tab": "feeds"}),
+    path("settings/<str:tab>/", settings_view, name="settings-unified"),
+    # Legacy routes (backwards compatibility)
+    path("settings/rss/", lambda request: redirect("settings-unified", tab="feeds"), name="settings-feeds"),
+    path("settings/bookmarks/", lambda request: redirect("settings-unified", tab="categories"), name="settings-bookmarks"),
+    path("settings/categories/", lambda request: redirect("settings-unified", tab="categories"), name="settings-categories"),
+    path("settings/tags/", lambda request: redirect("settings-unified", tab="tags"), name="settings-tags"),
+    path("settings/account/", lambda request: redirect("settings-unified", tab="account"), name="settings-account"),
     # Legacy redirects
     path(
         "feeds/settings/",

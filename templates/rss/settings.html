@@ -23,27 +23,27 @@
     </div>
 
     {# ── Tabs ───────────────────────────────────────── #}
-    <div class="flex items-center gap-1 border-b border-gray-200 mb-6">
-        <a href="{% url 'settings-feeds' %}"
-           class="px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px
+    <div class="flex items-center gap-1 border-b border-gray-200 mb-6 overflow-x-auto">
+        <a href="{% url 'settings-unified' tab='feeds' %}"
+           class="px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px whitespace-nowrap
                   {% if active_tab == 'feeds' %}border-brand-600 text-brand-700{% else %}border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300{% endif %}">
             <svg class="w-4 h-4 inline -mt-0.5 mr-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0112 16.5a17.92 17.92 0 01-8.716-2.247m0 0A8.966 8.966 0 013 12c0-1.777.515-3.434 1.404-4.83"/></svg>
             Feeds
         </a>
-        <a href="{% url 'settings-tags' %}"
-           class="px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px
+        <a href="{% url 'settings-unified' tab='tags' %}"
+           class="px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px whitespace-nowrap
                   {% if active_tab == 'tags' %}border-brand-600 text-brand-700{% else %}border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300{% endif %}">
             <svg class="w-4 h-4 inline -mt-0.5 mr-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M7 7h.01M7 3h5a1.99 1.99 0 011.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z"/></svg>
             Tags
         </a>
-        <a href="{% url 'settings-categories' %}"
-           class="px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px
+        <a href="{% url 'settings-unified' tab='categories' %}"
+           class="px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px whitespace-nowrap
                   {% if active_tab == 'categories' %}border-brand-600 text-brand-700{% else %}border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300{% endif %}">
             <svg class="w-4 h-4 inline -mt-0.5 mr-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M3 7h18M6 3h12a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V5a2 2 0 012-2z"/></svg>
             Categories
         </a>
-        <a href="{% url 'settings-account' %}"
-           class="px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px
+        <a href="{% url 'settings-unified' tab='account' %}"
+           class="px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px whitespace-nowrap
                   {% if active_tab == 'account' %}border-brand-600 text-brand-700{% else %}border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300{% endif %}">
             <svg class="w-4 h-4 inline -mt-0.5 mr-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"/></svg>
             Account

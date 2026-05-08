@@ -12,6 +12,7 @@ from .views import (
     main_dashboard_view,
     overview_dashboard_view,
     read_later_view,
+    refresh_all_feeds_view,
     rss_settings_view,
     settings_view,
 )
@@ -33,15 +34,13 @@ urlpatterns = [
     ),
     path("read-later/", read_later_view, name="read-later"),
     path("favorites/", favorites_view, name="favorites"),
-    # Settings (Unified)
+    # Settings (Unified) — named aliases must come before <str:tab> catch-all
     path("settings/", settings_view, name="settings-unified", kwargs={"tab": "feeds"}),
-    path("settings/<str:tab>/", settings_view, name="settings-unified"),
-    # Legacy routes (backwards compatibility)
-    path("settings/rss/", lambda request: redirect("settings-unified", tab="feeds"), name="settings-feeds"),
-    path("settings/bookmarks/", lambda request: redirect("settings-unified", tab="categories"), name="settings-bookmarks"),
-    path("settings/categories/", lambda request: redirect("settings-unified", tab="categories"), name="settings-categories"),
-    path("settings/tags/", lambda request: redirect("settings-unified", tab="tags"), name="settings-tags"),
-    path("settings/account/", lambda request: redirect("settings-unified", tab="account"), name="settings-account"),
+    path("settings/feeds/", settings_view, name="settings-feeds", kwargs={"tab": "feeds"}),
+    path("settings/tags/", settings_view, name="settings-tags", kwargs={"tab": "tags"}),
+    path("settings/categories/", settings_view, name="settings-categories", kwargs={"tab": "categories"}),
+    path("settings/account/", settings_view, name="settings-account", kwargs={"tab": "account"}),
+    path("settings/<str:tab>/", settings_view, name="settings-unified-tab"),
     # Legacy redirects
     path(
         "feeds/settings/",
@@ -57,4 +56,5 @@ urlpatterns = [
     path("feeds/opml/export/", export_opml_view, name="feeds-opml-export"),
     path("feeds/opml/import/", import_opml_view, name="feeds-opml-import"),
     path("feeds/<int:feed_id>/update/", feed_update_view, name="feed-update"),
+    path("feeds/refresh-all/", refresh_all_feeds_view, name="feeds-refresh-all"),
 ]

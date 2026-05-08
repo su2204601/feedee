@@ -42,8 +42,12 @@
 
                 {# ── Category ── #}
                 <div>
-                    <label class="block text-xs font-medium text-gray-500 mb-1">Category</label>
+                    <div class="flex items-center justify-between mb-1">
+                        <label class="block text-xs font-medium text-gray-500">Category</label>
+                        <a href="{% url 'settings-categories' %}" class="text-xs text-brand-600 hover:text-brand-700 font-medium" target="_blank">Manage categories</a>
+                    </div>
                     {{ form.category }}
+                    <p class="mt-1 text-xs text-gray-500">You can create new categories in settings</p>
                 </div>
 
                 {# ── Thumbnail preview ── #}
@@ -56,8 +60,12 @@
 
                 {# ── Tags ── #}
                 <div>
-                    <label class="block text-xs font-medium text-gray-500 mb-1">Tags (comma separated)</label>
+                    <div class="flex items-center justify-between mb-1">
+                        <label class="block text-xs font-medium text-gray-500">Tags (comma separated)</label>
+                        <a href="{% url 'settings-tags' %}" class="text-xs text-brand-600 hover:text-brand-700 font-medium" target="_blank">Manage tags</a>
+                    </div>
                     {{ form.tag_names }}
+                    <p class="mt-1 text-xs text-gray-500">Type comma-separated tags or click existing ones below</p>
                     {% if existing_tags %}
                     <div class="mt-2 flex flex-wrap gap-1">
                         {% for tag in existing_tags %}

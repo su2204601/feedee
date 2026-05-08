@@ -14,6 +14,21 @@ class Category(models.Model):
         ("both", "Both"),
     ]
 
+    COLOR_CHOICES = [
+        ("#EF4444", "Red"),
+        ("#F97316", "Orange"),
+        ("#EAB308", "Yellow"),
+        ("#22C55E", "Green"),
+        ("#14B8A6", "Teal"),
+        ("#3B82F6", "Blue"),
+        ("#6366F1", "Indigo"),
+        ("#8B5CF6", "Violet"),
+        ("#EC4899", "Pink"),
+        ("#6B7280", "Gray"),
+        ("#78716C", "Stone"),
+        ("#0EA5E9", "Sky"),
+    ]
+
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -21,7 +36,14 @@ class Category(models.Model):
     )
     name = models.CharField(max_length=100)
     description = models.TextField(blank=True, default="")
-    color = models.CharField(max_length=7, default="#3B82F6")
+    color = models.CharField(max_length=7, choices=COLOR_CHOICES, default="#3B82F6")
+    parent = models.ForeignKey(
+        "self",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="children",
+    )
     content_type = models.CharField(
         max_length=20,
         choices=CONTENT_TYPE_CHOICES,
@@ -40,10 +62,22 @@ class Category(models.Model):
             ),
         ]
         ordering = ["display_order", "name"]
-        verbose_name_plural = "Categories"
+        verbose_name = "カテゴリ"
+        verbose_name_plural = "カテゴリ"
 
     def __str__(self) -> str:
+        if self.parent:
+            return f"{self.parent.name} / {self.name}"
         return self.name
+
+    @property
+    def full_path(self):
+        parts = []
+        node = self
+        while node:
+            parts.append(node.name)
+            node = node.parent
+        return " / ".join(reversed(parts))
 
 
 class Feed(models.Model):
@@ -60,6 +94,7 @@ class Feed(models.Model):
     )
     display_order = models.PositiveIntegerField(default=0, db_index=True)
     is_active = models.BooleanField(default=True)
+    is_public = models.BooleanField(default=False, help_text="Whether this feed is publicly visible (for future sharing features)")
     last_fetched_at = models.DateTimeField(null=True, blank=True)
     last_success_at = models.DateTimeField(null=True, blank=True)
     last_error = models.TextField(blank=True, default="")
@@ -68,6 +103,10 @@ class Feed(models.Model):
     last_modified = models.CharField(max_length=255, blank=True, default="")
     next_fetch_at = models.DateTimeField(default=timezone.now, db_index=True)
     fetch_interval_minutes = models.PositiveIntegerField(default=60)
+
+    class Meta:
+        verbose_name = "フィード"
+        verbose_name_plural = "フィード"
 
     def __str__(self) -> str:
         return f"{self.name} ({self.url})"
@@ -155,6 +194,8 @@ class Article(models.Model):
 
     class Meta:
         ordering = ["-published_at", "-created_at"]
+        verbose_name = "記事"
+        verbose_name_plural = "記事"
 
     @staticmethod
     def _sanitize_html(html: str) -> str:
@@ -186,6 +227,7 @@ class ArticleUserState(models.Model):
     article = models.ForeignKey(
         Article, on_delete=models.CASCADE, related_name="user_states"
     )
+    is_favorite = models.BooleanField(default=False, db_index=True)
     is_read_later = models.BooleanField(default=False)
     is_read = models.BooleanField(default=False)
     updated_at = models.DateTimeField(auto_now=True)
@@ -199,7 +241,10 @@ class ArticleUserState(models.Model):
         indexes = [
             models.Index(fields=["user", "updated_at"]),
             models.Index(fields=["user", "is_read_later"]),
+            models.Index(fields=["user", "is_favorite"]),
         ]
+        verbose_name = "記事ユーザー状態"
+        verbose_name_plural = "記事ユーザー状態"
 
     def __str__(self) -> str:
         return f"state(user={self.user_id}, article={self.article_id})"
@@ -218,6 +263,7 @@ class BookmarkUserState(models.Model):
     )
     # is_pinned is distinct from favorite: pinned is for homepage placement.
     is_pinned = models.BooleanField(default=False, db_index=True)
+    is_favorite = models.BooleanField(default=False, db_index=True)
     is_read_later = models.BooleanField(default=False)
     is_read = models.BooleanField(default=False)
     updated_at = models.DateTimeField(auto_now=True)
@@ -231,7 +277,10 @@ class BookmarkUserState(models.Model):
         indexes = [
             models.Index(fields=["user", "updated_at"]),
             models.Index(fields=["user", "is_read_later"]),
+            models.Index(fields=["user", "is_favorite"]),
         ]
+        verbose_name = "ブックマークユーザー状態"
+        verbose_name_plural = "ブックマークユーザー状態"
 
     def __str__(self) -> str:
         return f"bookmark_state(user={self.user_id}, bookmark={self.bookmark_id})"
@@ -274,6 +323,8 @@ class ExtractionTask(models.Model):
             models.Index(fields=["status", "created_at"]),
             models.Index(fields=["status", "retry_count"]),
         ]
+        verbose_name = "抽出タスク"
+        verbose_name_plural = "抽出タスク"
 
     def __str__(self) -> str:
         return f"ExtractionTask({self.article_id}, {self.status})"
@@ -316,6 +367,10 @@ class UserProfile(models.Model):
         help_text="Default display mode for article and bookmark lists",
     )
 
+    class Meta:
+        verbose_name = "ユーザープロフィール"
+        verbose_name_plural = "ユーザープロフィール"
+
     def __str__(self) -> str:
         return f"Profile({self.user.username})"
 
@@ -328,13 +383,15 @@ class Tag(models.Model):
         on_delete=models.CASCADE,
         related_name="tags",
     )
-    color = models.CharField(max_length=7, default="#3B82F6")
+    color = models.CharField(max_length=7, choices=Category.COLOR_CHOICES, default="#3B82F6")
 
     class Meta:
         constraints = [
             models.UniqueConstraint(fields=["user", "slug"], name="uniq_user_tag_slug"),
         ]
         ordering = ["name"]
+        verbose_name = "タグ"
+        verbose_name_plural = "タグ"
 
     def save(self, *args, **kwargs):
         if not self.slug:
@@ -346,6 +403,8 @@ class Tag(models.Model):
 
 
 class BookmarkCategory(models.Model):
+    COLOR_CHOICES = Category.COLOR_CHOICES
+
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -353,7 +412,14 @@ class BookmarkCategory(models.Model):
     )
     name = models.CharField(max_length=100)
     description = models.TextField(blank=True, default="")
-    color = models.CharField(max_length=7, default="#3B82F6")
+    color = models.CharField(max_length=7, choices=Category.COLOR_CHOICES, default="#3B82F6")
+    parent = models.ForeignKey(
+        "self",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="children",
+    )
     display_order = models.PositiveIntegerField(default=0, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -365,10 +431,22 @@ class BookmarkCategory(models.Model):
             ),
         ]
         ordering = ["display_order", "name"]
-        verbose_name_plural = "Bookmark Categories"
+        verbose_name = "ブックマークカテゴリ"
+        verbose_name_plural = "ブックマークカテゴリ"
 
     def __str__(self) -> str:
+        if self.parent:
+            return f"{self.parent.name} / {self.name}"
         return self.name
+
+    @property
+    def full_path(self):
+        parts = []
+        node = self
+        while node:
+            parts.append(node.name)
+            node = node.parent
+        return " / ".join(reversed(parts))
 
 
 class Bookmark(models.Model):
@@ -438,6 +516,8 @@ class Bookmark(models.Model):
             models.Index(fields=["user", "created_at"]),
             models.Index(fields=["user", "-created_at"]),
         ]
+        verbose_name = "ブックマーク"
+        verbose_name_plural = "ブックマーク"
 
     def save(self, *args, **kwargs):
         """Automatically compute normalized_url and hash on save."""

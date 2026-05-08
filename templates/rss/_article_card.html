@@ -1,10 +1,65 @@
+{% load static %}
 {# Reusable article card with inline state toggle buttons #}
 {# Expects: article (dict with id, title, link, domain, feed_name, summary, image_url, published_at, created_at, is_saved, is_read_later, is_read) #}
+{% if display_mode == 'list' %}
+{# Table row format for list mode #}
+<tr class="article-card group border-b border-gray-100 hover:bg-gray-50 transition-colors {% if article.is_read %}is-read{% endif %}"
+    data-article-id="{{ article.id }}">
+    <td class="py-3 pl-4 pr-2">
+        <a href="{% url 'article-reader' article.id %}" class="block">
+            <div class="flex items-center gap-2">
+                {% if article.image_url %}
+                <img src="{{ article.image_url }}" alt="" class="w-12 h-12 rounded object-cover bg-gray-100 flex-shrink-0" loading="lazy">
+                {% else %}
+                <div class="w-12 h-12 rounded bg-gray-100 flex-shrink-0"></div>
+                {% endif %}
+                <h2 class="text-sm font-medium {% if article.is_read %}text-gray-500{% else %}text-gray-900 group-hover:text-brand-700{% endif %} transition-colors line-clamp-2">
+                    {{ article.title }}
+                </h2>
+            </div>
+        </a>
+    </td>
+    <td class="py-3 px-2 text-xs text-gray-500 font-medium whitespace-nowrap">
+        {% if article.feed_name %}{{ article.feed_name }}{% else %}—{% endif %}
+    </td>
+    <td class="py-3 px-2 text-xs text-gray-400 whitespace-nowrap">
+        <time datetime="{{ article.published_at|default:article.created_at|date:'c' }}">
+            {{ article.published_at|default:article.created_at|timesince }} ago
+        </time>
+    </td>
+    <td class="py-3 pl-2 pr-4">
+        <div class="flex items-center justify-end gap-0.5">
+            {% if request.user.is_authenticated %}
+            {# ── Save to Bookmarks ── #}
+            <button type="button" title="{% if article.is_saved %}Already saved to bookmarks{% else %}Save to Bookmarks{% endif %}"
+                    class="save-to-bookmark p-1.5 rounded-lg transition-colors {% if article.is_saved %}text-violet-500{% else %}text-gray-400 hover:text-violet-500 opacity-0 group-hover:opacity-100{% endif %}"
+                    data-article-id="{{ article.id }}" data-save-url="{% url 'article-save' article.id %}"
+                    data-saved="{% if article.is_saved %}true{% else %}false{% endif %}">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101M10.172 13.828a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+            </button>
+            {# ── Read Later ── #}
+            <button type="button" title="{% if article.is_read_later %}Remove read later{% else %}Read later{% endif %}"
+                    class="state-toggle p-1.5 rounded-lg transition-colors {% if article.is_read_later %}text-sky-500{% else %}text-gray-400 hover:text-sky-500 opacity-0 group-hover:opacity-100{% endif %}"
+                    data-article-id="{{ article.id }}" data-field="is_read_later" data-active="{% if article.is_read_later %}true{% else %}false{% endif %}">
+                <svg class="w-4 h-4" fill="{% if article.is_read_later %}currentColor{% else %}none{% endif %}" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/></svg>
+            </button>
+            {# ── Read ── #}
+            <button type="button" title="{% if article.is_read %}Mark unread{% else %}Mark read{% endif %}"
+                    class="state-toggle p-1.5 rounded-lg transition-colors {% if article.is_read %}text-emerald-500{% else %}text-gray-400 hover:text-emerald-500 opacity-0 group-hover:opacity-100{% endif %}"
+                    data-article-id="{{ article.id }}" data-field="is_read" data-active="{% if article.is_read %}true{% else %}false{% endif %}">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M5 13l4 4L19 7"/></svg>
+            </button>
+            {% endif %}
+        </div>
+    </td>
+</tr>
+{% else %}
+{# Card/Compact format #}
 <div class="article-card group {% if display_mode == 'card' %}h-full rounded-xl border border-gray-200 bg-white hover:border-gray-300 hover:shadow-md p-4 transition-all flex flex-col{% else %}flex items-start gap-3 rounded-lg border border-transparent hover:border-gray-200 hover:bg-white hover:shadow-soft p-3 -mx-1 transition-all{% endif %} {% if article.is_read %}is-read{% endif %}"
      data-article-id="{{ article.id }}">
-    {% if article.image_url and display_mode != 'list' %}
+    {% if display_mode != 'list' %}
     <a href="{% url 'article-reader' article.id %}" class="{% if display_mode == 'card' %}block mb-3{% else %}flex-shrink-0 hidden sm:block{% endif %}">
-        <img src="{{ article.image_url }}" alt="" class="{% if display_mode == 'card' %}w-full h-40{% else %}w-28 h-20{% endif %} rounded-lg object-cover bg-gray-100" loading="lazy">
+        <img src="{% if article.image_url %}{{ article.image_url }}{% else %}{% static 'placeholder.svg' %}{% endif %}" alt="" class="{% if display_mode == 'card' %}w-full h-40{% else %}w-28 h-20{% endif %} rounded-lg object-cover bg-gray-100" loading="lazy">
     </a>
     {% endif %}
     <a href="{% url 'article-reader' article.id %}" class="{% if display_mode == 'card' %}block flex-1{% else %}flex-1 min-w-0{% endif %}">
@@ -57,3 +112,4 @@
         {% endif %}
     </div>
 </div>
+{% endif %}

@@ -112,11 +112,31 @@
 
     {# ── Article list ───────────────────────────────── #}
     {% if article_cards %}
-    <div class="{% if display_mode == 'card' %}grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3{% elif display_mode == 'list' %}space-y-0.5{% else %}space-y-1{% endif %}">
+    {% if display_mode == 'list' %}
+    <div class="border border-gray-200 bg-white shadow-sm overflow-hidden">
+        <table class="w-full">
+            <thead class="bg-gray-50 border-b border-gray-200">
+                <tr>
+                    <th class="py-2.5 pl-4 pr-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Article</th>
+                    <th class="py-2.5 px-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Feed</th>
+                    <th class="py-2.5 px-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Published</th>
+                    <th class="py-2.5 pl-2 pr-4 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for article in article_cards %}
+                    {% include 'rss/_article_card.html' with article=article %}
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="{% if display_mode == 'card' %}grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3{% else %}space-y-1{% endif %}">
         {% for article in article_cards %}
             {% include 'rss/_article_card.html' with article=article %}
         {% endfor %}
     </div>
+    {% endif %}
 
     {% include 'includes/_pagination.html' %}
 

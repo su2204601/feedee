@@ -1,4 +1,9 @@
 import "../css/main.css";
+import Alpine from "alpinejs";
+
+// Initialize Alpine.js
+window.Alpine = Alpine;
+Alpine.start();
 
 // ── Theme preference sync ─────────────────────────────────
 (function () {
@@ -160,6 +165,10 @@ import "../css/main.css";
 
         // Update button styling
         var styles = {
+          is_favorite: {
+            active: "text-rose-500",
+            inactive: "text-gray-400 hover:text-rose-500",
+          },
           is_read_later: {
             active: "text-sky-500",
             inactive: "text-gray-400 hover:text-sky-500",
@@ -175,7 +184,8 @@ import "../css/main.css";
 
         if (data[field]) {
           s.active.split(" ").forEach(function (c) { btn.classList.add(c); });
-          if (svg && field !== "is_read") svg.setAttribute("fill", "currentColor");
+          if (svg && field !== "is_read" && field !== "is_favorite") svg.setAttribute("fill", "currentColor");
+          if (svg && field === "is_favorite") svg.setAttribute("fill", "currentColor");
         } else {
           s.inactive.split(" ").forEach(function (c) { btn.classList.add(c); });
           btn.classList.add("opacity-0", "group-hover:opacity-100");

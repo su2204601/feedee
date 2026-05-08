@@ -13,6 +13,21 @@
     .tag-card .tag-edit { display: none; }
     .tag-card.editing .tag-edit { display: block; }
     .tag-card.editing .tag-summary { display: none; }
+    .color-swatch {
+        width: 2rem;
+        height: 2rem;
+        border-radius: 9999px;
+        cursor: pointer;
+        border: 2px solid transparent;
+        transition: all 150ms;
+    }
+    .color-swatch:hover {
+        transform: scale(1.1);
+    }
+    .color-swatch.selected {
+        border-color: #1f2937;
+        box-shadow: 0 0 0 2px rgba(107, 114, 128, 0.5), 0 0 0 4px white;
+    }
 </style>
 {% endblock %}
 
@@ -24,25 +39,25 @@
 
     {# ── Tabs ───────────────────────────────────────── #}
     <div class="flex items-center gap-1 border-b border-gray-200 mb-6 overflow-x-auto">
-        <a href="{% url 'settings-unified' tab='feeds' %}"
+        <a href="{% url 'settings-feeds' %}"
            class="px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px whitespace-nowrap
                   {% if active_tab == 'feeds' %}border-brand-600 text-brand-700{% else %}border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300{% endif %}">
             <svg class="w-4 h-4 inline -mt-0.5 mr-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0112 16.5a17.92 17.92 0 01-8.716-2.247m0 0A8.966 8.966 0 013 12c0-1.777.515-3.434 1.404-4.83"/></svg>
             Feeds
         </a>
-        <a href="{% url 'settings-unified' tab='tags' %}"
+        <a href="{% url 'settings-tags' %}"
            class="px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px whitespace-nowrap
                   {% if active_tab == 'tags' %}border-brand-600 text-brand-700{% else %}border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300{% endif %}">
             <svg class="w-4 h-4 inline -mt-0.5 mr-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M7 7h.01M7 3h5a1.99 1.99 0 011.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z"/></svg>
             Tags
         </a>
-        <a href="{% url 'settings-unified' tab='categories' %}"
+        <a href="{% url 'settings-categories' %}"
            class="px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px whitespace-nowrap
                   {% if active_tab == 'categories' %}border-brand-600 text-brand-700{% else %}border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300{% endif %}">
             <svg class="w-4 h-4 inline -mt-0.5 mr-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M3 7h18M6 3h12a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V5a2 2 0 012-2z"/></svg>
             Categories
         </a>
-        <a href="{% url 'settings-unified' tab='account' %}"
+        <a href="{% url 'settings-account' %}"
            class="px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px whitespace-nowrap
                   {% if active_tab == 'account' %}border-brand-600 text-brand-700{% else %}border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300{% endif %}">
             <svg class="w-4 h-4 inline -mt-0.5 mr-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"/></svg>
@@ -57,10 +72,19 @@
 
     <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
         <p class="text-sm text-gray-500">{{ feeds|length }} feed{{ feeds|length|pluralize }}</p>
-        <a href="{% url 'feeds-opml-export' %}"
-           class="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 transition-colors shadow-sm">
-            Export OPML
-        </a>
+        <div class="flex items-center gap-2">
+            <form method="post" action="{% url 'feeds-refresh-all' %}" data-confirm="Refresh all active feeds now?">
+                {% csrf_token %}
+                <button type="submit" class="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 transition-colors shadow-sm">
+                    <svg class="w-3.5 h-3.5 inline -mt-0.5 mr-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                    Refresh all
+                </button>
+            </form>
+            <a href="{% url 'feeds-opml-export' %}"
+               class="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 transition-colors shadow-sm">
+                Export OPML
+            </a>
+        </div>
     </div>
 
     {# ── Add Feed ── #}
@@ -112,14 +136,22 @@
 
             <div class="feed-summary flex items-center gap-3 px-4 py-3 cursor-pointer" onclick="window.toggleFeedEdit(this)">
                 <svg class="w-4 h-4 text-gray-300 cursor-grab flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 8h16M4 16h16"/></svg>
-                <div class="w-2 h-2 rounded-full flex-shrink-0 {% if feed.is_active %}bg-emerald-400{% else %}bg-gray-300{% endif %}"></div>
+                <div class="w-2 h-2 rounded-full flex-shrink-0 {% if not feed.is_active %}bg-gray-300{% elif feed.last_error %}bg-amber-400{% else %}bg-emerald-400{% endif %}" title="{% if not feed.is_active %}Inactive{% elif feed.last_error %}Error{% else %}OK{% endif %}"></div>
                 <div class="flex-1 min-w-0">
                     <span class="text-sm font-medium text-gray-900">{{ feed.name }}</span>
                     <span class="text-xs text-gray-400 ml-2 hidden sm:inline truncate">{{ feed.url }}</span>
+                    {% if feed.last_error %}
+                    <p class="text-[11px] text-amber-600 mt-0.5 truncate" title="{{ feed.last_error }}">{{ feed.last_error|truncatewords:10 }}</p>
+                    {% endif %}
                 </div>
                 <div class="flex items-center gap-3 flex-shrink-0 text-xs text-gray-400">
                     {% if feed.category %}<span class="hidden sm:inline rounded-full bg-gray-100 px-2 py-0.5 text-gray-500">{{ feed.category }}</span>{% endif %}
                     <span class="tabular-nums">{{ feed.article_count }} article{{ feed.article_count|pluralize }}</span>
+                    {% if feed.last_fetched_at %}
+                    <span class="hidden md:inline tabular-nums" title="Last fetched: {{ feed.last_fetched_at|date:'Y-m-d H:i' }}">{{ feed.last_fetched_at|timesince }} ago</span>
+                    {% else %}
+                    <span class="hidden md:inline text-gray-300">Never fetched</span>
+                    {% endif %}
                     <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M9 5l7 7-7 7"/></svg>
                 </div>
             </div>
@@ -141,6 +173,30 @@
                             {{ form.url }}
                         </div>
                     </div>
+                    {# ── Feed status info ── #}
+                    <div class="mb-4 grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px] text-gray-500">
+                        <div class="rounded-lg bg-gray-100 px-2 py-1.5">
+                            <span class="block text-gray-400">Last fetched</span>
+                            <span class="font-medium text-gray-600">{% if feed.last_fetched_at %}{{ feed.last_fetched_at|timesince }} ago{% else %}Never{% endif %}</span>
+                        </div>
+                        <div class="rounded-lg bg-gray-100 px-2 py-1.5">
+                            <span class="block text-gray-400">Last success</span>
+                            <span class="font-medium text-gray-600">{% if feed.last_success_at %}{{ feed.last_success_at|timesince }} ago{% else %}Never{% endif %}</span>
+                        </div>
+                        <div class="rounded-lg bg-gray-100 px-2 py-1.5">
+                            <span class="block text-gray-400">Interval</span>
+                            <span class="font-medium text-gray-600">{{ feed.fetch_interval_minutes }}min</span>
+                        </div>
+                        <div class="rounded-lg bg-gray-100 px-2 py-1.5">
+                            <span class="block text-gray-400">Failures</span>
+                            <span class="font-medium {% if feed.consecutive_failures > 0 %}text-amber-600{% else %}text-gray-600{% endif %}">{{ feed.consecutive_failures }}</span>
+                        </div>
+                    </div>
+                    {% if feed.last_error %}
+                    <div class="mb-4 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-700">
+                        <span class="font-medium">Last error:</span> {{ feed.last_error }}
+                    </div>
+                    {% endif %}
                     <div class="flex items-center justify-between">
                         <label class="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
                             {{ form.is_active }}
@@ -158,8 +214,16 @@
                         </div>
                     </div>
                 </form>
-                <div class="mt-3 pt-3 border-t border-gray-200">
-                    <form method="post" action="{% url 'feed-update' feed.id %}" data-confirm="Delete &#34;{{ feed.name }}&#34; and all its articles? This cannot be undone." data-confirm-danger>
+                <div class="mt-3 pt-3 border-t border-gray-200 flex items-center justify-between">
+                    <form method="post" action="{% url 'feed-update' feed.id %}" class="inline">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="refresh">
+                        <button type="submit" class="text-xs text-brand-600 hover:text-brand-700 font-medium transition-colors">
+                            <svg class="w-3.5 h-3.5 inline -mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                            Refresh now
+                        </button>
+                    </form>
+                    <form method="post" action="{% url 'feed-update' feed.id %}" data-confirm="Delete &#34;{{ feed.name }}&#34; and all its articles? This cannot be undone." data-confirm-danger class="inline">
                         {% csrf_token %}
                         <input type="hidden" name="action" value="delete">
                         <button type="submit" class="text-xs text-rose-500 hover:text-rose-700 font-medium transition-colors">
@@ -203,20 +267,48 @@
     <p class="text-sm text-gray-500 mb-4">{{ categories|length }} categor{{ categories|length|pluralize:"y,ies" }}</p>
 
     <section class="rounded-xl bg-white border border-gray-200 shadow-soft p-5 mb-6">
-        <form method="post" class="flex flex-wrap items-end gap-3">
+        <form method="post"
+              x-data="{
+                  selectedColor: '{{ category_form.color.value|default:'#3B82F6' }}',
+                  colors: [
+                      '#EF4444', '#F97316', '#EAB308', '#22C55E',
+                      '#14B8A6', '#3B82F6', '#6366F1', '#8B5CF6',
+                      '#EC4899', '#6B7280', '#78716C', '#0EA5E9'
+                  ]
+              }">
             {% csrf_token %}
-            <div class="flex-1 min-w-[160px]">
-                <label class="block text-xs font-medium text-gray-500 mb-1">Name</label>
-                {{ category_form.name }}
+            <div class="grid grid-cols-1 gap-4">
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 mb-1">Name</label>
+                        {{ category_form.name }}
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 mb-1">Parent</label>
+                        {{ category_form.parent }}
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 mb-2">Color</label>
+                    {{ category_form.color }}
+                    <div class="flex flex-wrap gap-2">
+                        <template x-for="color in colors" :key="color">
+                            <button type="button"
+                                    class="color-swatch"
+                                    :class="{ 'selected': selectedColor === color }"
+                                    :style="'background-color: ' + color"
+                                    @click="selectedColor = color">
+                            </button>
+                        </template>
+                    </div>
+                </div>
             </div>
-            <div class="min-w-[80px]">
-                <label class="block text-xs font-medium text-gray-500 mb-1">Color</label>
-                {{ category_form.color }}
+            <div class="mt-4">
+                <button class="rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium px-5 py-2.5 transition-colors shadow-sm whitespace-nowrap">
+                    <svg class="w-4 h-4 inline -mt-0.5 mr-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M12 4v16m8-8H4"/></svg>
+                    Add category
+                </button>
             </div>
-            <button class="rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium px-5 py-2.5 transition-colors shadow-sm whitespace-nowrap">
-                <svg class="w-4 h-4 inline -mt-0.5 mr-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M12 4v16m8-8H4"/></svg>
-                Add category
-            </button>
         </form>
     </section>
 
@@ -229,7 +321,7 @@
             <div class="category-summary flex items-center gap-3 px-4 py-3 cursor-pointer" onclick="this.closest('.category-card').classList.toggle('editing')">
                 <span class="w-4 h-4 rounded-full flex-shrink-0" style="background-color: {{ category.color }}"></span>
                 <div class="flex-1 min-w-0">
-                    <span class="text-sm font-medium text-gray-900">{{ category.name }}</span>
+                    <span class="text-sm font-medium text-gray-900">{{ category.full_path }}</span>
                     {% if category.description %}
                     <p class="text-xs text-gray-500 mt-0.5">{{ category.description|truncatewords:8 }}</p>
                     {% endif %}
@@ -241,7 +333,15 @@
             </div>
 
             <div class="category-edit border-t border-gray-100 bg-gray-50/50 px-4 py-4">
-                <form method="post" action="{% url 'bookmark-category-update' category.id %}">
+                <form method="post" action="{% url 'bookmark-category-update' category.id %}"
+                      x-data="{
+                          selectedColor: '{{ form.color.value|default:'#3B82F6' }}',
+                          colors: [
+                              '#EF4444', '#F97316', '#EAB308', '#22C55E',
+                              '#14B8A6', '#3B82F6', '#6366F1', '#8B5CF6',
+                              '#EC4899', '#6B7280', '#78716C', '#0EA5E9'
+                          ]
+                      }">
                     {% csrf_token %}
                     <div class="space-y-3 mb-4">
                         <div>
@@ -253,8 +353,22 @@
                             {{ form.description }}
                         </div>
                         <div>
-                            <label class="block text-xs font-medium text-gray-500 mb-1">Color</label>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">Parent</label>
+                            {{ form.parent }}
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-2">Color</label>
                             {{ form.color }}
+                            <div class="flex flex-wrap gap-2">
+                                <template x-for="color in colors" :key="color">
+                                    <button type="button"
+                                            class="color-swatch"
+                                            :class="{ 'selected': selectedColor === color }"
+                                            :style="'background-color: ' + color"
+                                            @click="selectedColor = color">
+                                    </button>
+                                </template>
+                            </div>
                         </div>
                     </div>
                     <div class="flex items-center justify-between">
@@ -302,20 +416,42 @@
 
     {# ── Add Tag ── #}
     <section class="rounded-xl bg-white border border-gray-200 shadow-soft p-5 mb-6">
-        <form method="post" class="flex flex-wrap items-end gap-3">
+        <form method="post"
+              x-data="{
+                  selectedColor: '{{ tag_form.color.value|default:'#3B82F6' }}',
+                  colors: [
+                      '#EF4444', '#F97316', '#EAB308', '#22C55E',
+                      '#14B8A6', '#3B82F6', '#6366F1', '#8B5CF6',
+                      '#EC4899', '#6B7280', '#78716C', '#0EA5E9'
+                  ]
+              }">
             {% csrf_token %}
-            <div class="flex-1 min-w-[160px]">
-                <label class="block text-xs font-medium text-gray-500 mb-1">Name</label>
-                {{ tag_form.name }}
+            <div class="grid grid-cols-1 gap-4">
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 mb-1">Name</label>
+                    {{ tag_form.name }}
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 mb-2">Color</label>
+                    {{ tag_form.color }}
+                    <div class="flex flex-wrap gap-2">
+                        <template x-for="color in colors" :key="color">
+                            <button type="button"
+                                    class="color-swatch"
+                                    :class="{ 'selected': selectedColor === color }"
+                                    :style="'background-color: ' + color"
+                                    @click="selectedColor = color">
+                            </button>
+                        </template>
+                    </div>
+                </div>
             </div>
-            <div class="min-w-[80px]">
-                <label class="block text-xs font-medium text-gray-500 mb-1">Color</label>
-                {{ tag_form.color }}
+            <div class="mt-4">
+                <button class="rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium px-5 py-2.5 transition-colors shadow-sm whitespace-nowrap">
+                    <svg class="w-4 h-4 inline -mt-0.5 mr-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M12 4v16m8-8H4"/></svg>
+                    Add tag
+                </button>
             </div>
-            <button class="rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium px-5 py-2.5 transition-colors shadow-sm whitespace-nowrap">
-                <svg class="w-4 h-4 inline -mt-0.5 mr-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M12 4v16m8-8H4"/></svg>
-                Add tag
-            </button>
         </form>
     </section>
 
@@ -338,16 +474,34 @@
             </div>
 
             <div class="tag-edit border-t border-gray-100 bg-gray-50/50 px-4 py-4">
-                <form method="post" action="{% url 'tag-update' tag.id %}">
+                <form method="post" action="{% url 'tag-update' tag.id %}"
+                      x-data="{
+                          selectedColor: '{{ form.color.value|default:'#3B82F6' }}',
+                          colors: [
+                              '#EF4444', '#F97316', '#EAB308', '#22C55E',
+                              '#14B8A6', '#3B82F6', '#6366F1', '#8B5CF6',
+                              '#EC4899', '#6B7280', '#78716C', '#0EA5E9'
+                          ]
+                      }">
                     {% csrf_token %}
-                    <div class="flex flex-wrap items-end gap-3 mb-4">
-                        <div class="flex-1 min-w-[160px]">
+                    <div class="space-y-3 mb-4">
+                        <div>
                             <label class="block text-xs font-medium text-gray-500 mb-1">Name</label>
                             {{ form.name }}
                         </div>
-                        <div class="min-w-[80px]">
-                            <label class="block text-xs font-medium text-gray-500 mb-1">Color</label>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-2">Color</label>
                             {{ form.color }}
+                            <div class="flex flex-wrap gap-2">
+                                <template x-for="color in colors" :key="color">
+                                    <button type="button"
+                                            class="color-swatch"
+                                            :class="{ 'selected': selectedColor === color }"
+                                            :style="'background-color: ' + color"
+                                            @click="selectedColor = color">
+                                    </button>
+                                </template>
+                            </div>
                         </div>
                     </div>
                     <div class="flex items-center justify-between">

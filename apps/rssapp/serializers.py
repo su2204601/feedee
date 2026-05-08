@@ -55,7 +55,7 @@ class ArticleUserStateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ArticleUserState
-        fields = ["article", "is_read_later", "is_read", "updated_at"]
+        fields = ["article", "is_favorite", "is_read_later", "is_read", "updated_at"]
         read_only_fields = ["article", "updated_at"]
 
 

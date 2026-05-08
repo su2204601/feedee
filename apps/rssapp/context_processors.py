@@ -55,10 +55,12 @@ def sidebar_feeds(request):
     total_unread = 0
     total_read_later = 0
     total_saved = 0
+    total_favorites = 0
 
     if is_auth:
         user_states = ArticleUserState.objects.filter(user=user)
         total_read_later = user_states.filter(is_read_later=True).count()
+        total_favorites = user_states.filter(is_favorite=True).count()
         total_saved = total_read_later
 
     feed_list = []
@@ -87,12 +89,14 @@ def sidebar_feeds(request):
     total_bookmarks_pinned = 0
     total_bookmarks_read_later = 0
     total_bookmarks_read = 0
+    total_bookmarks_favorite = 0
     if is_auth:
         total_bookmarks = Bookmark.objects.filter(user=user).count()
         bookmark_states = BookmarkUserState.objects.filter(user=user)
         total_bookmarks_pinned = bookmark_states.filter(is_pinned=True).count()
         total_bookmarks_read_later = bookmark_states.filter(is_read_later=True).count()
         total_bookmarks_read = bookmark_states.filter(is_read=True).count()
+        total_bookmarks_favorite = bookmark_states.filter(is_favorite=True).count()
         sidebar_tags = list(
             Tag.objects.filter(user=user)
             .annotate(bookmark_count=Count("bookmarks", distinct=True))
@@ -120,6 +124,7 @@ def sidebar_feeds(request):
         "sidebar_groups": sidebar_groups,
         "sidebar_total_unread": total_unread,
         "sidebar_total_read_later": total_read_later,
+        "sidebar_total_favorites": total_favorites,
         "sidebar_total_saved": total_saved,
         "sidebar_tags": sidebar_tags,
         "sidebar_bookmark_categories": sidebar_bookmark_categories,
@@ -127,6 +132,7 @@ def sidebar_feeds(request):
         "sidebar_total_bookmarks_pinned": total_bookmarks_pinned,
         "sidebar_total_bookmarks_read_later": total_bookmarks_read_later,
         "sidebar_total_bookmarks_read": total_bookmarks_read,
+        "sidebar_total_bookmarks_favorite": total_bookmarks_favorite,
         "theme_preference": theme_preference,
         "active_app": _detect_active_app(request),
     }

@@ -24,6 +24,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "rest_framework.authtoken",
+    "import_export",
     "apps.rssapp.apps.RssappConfig",
     "apps.rss_service.apps.RssServiceConfig",
     "apps.bookmark_service.apps.BookmarkServiceConfig",

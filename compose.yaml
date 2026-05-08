@@ -1,19 +1,35 @@
 services:
+  db:
+    image: postgres:16-alpine
+    env_file:
+      - path: .env
+        required: false
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-feedee}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   web:
     build:
       context: .
       dockerfile: Dockerfile
     command: >
-      sh -c "python manage.py migrate --noinput && python manage.py runserver 0.0.0.0:8000"
+      sh -c "python manage.py migrate --noinput && python manage.py runserver 0.0.0.0:8347"
     volumes:
       - .:/app
     ports:
-      - "8000:8000"
+      - "8347:8347"
     env_file:
       - path: .env
         required: false
     environment:
       - DJANGO_SETTINGS_MODULE=config.settings.development
+    depends_on:
+      db:
+        condition: service_healthy
 
   vite:
     image: node:22-slim
@@ -23,7 +39,9 @@ services:
       - .:/app
       - vite_node_modules:/app/node_modules
     ports:
-      - "5173:5173"
+      - "5847:5847"
+    environment:
+      - VITE_HMR_HOST=${VITE_HMR_HOST:-128.118.27.98}
 
   rss-worker:
     build:
@@ -33,12 +51,15 @@ services:
       - path: .env
         required: false
     environment:
-      - DJANGO_BASE_URL=http://web:8000
+      - DJANGO_BASE_URL=http://web:8347
       - WORKER_API_TOKEN=${WORKER_API_TOKEN:-}
-      - WORKER_CHECK_INTERVAL_SECONDS=3600
+      - WORKER_CHECK_INTERVAL_SECONDS=300
+      - no_proxy=localhost,127.0.0.1,web,db
+      - NO_PROXY=localhost,127.0.0.1,web,db
     depends_on:
       - web
     restart: unless-stopped
 
 volumes:
   vite_node_modules:
+  postgres_data:

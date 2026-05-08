@@ -86,6 +86,26 @@ type rssItem struct {
 	Enclosure      enclosure      `xml:"enclosure"`
 }
 
+type atomFeed struct {
+	Entries []atomEntry `xml:"entry"`
+}
+
+type atomEntry struct {
+	Title   string     `xml:"title"`
+	Links   []atomLink `xml:"link"`
+	ID      string     `xml:"id"`
+	Summary string     `xml:"summary"`
+	Content string     `xml:"content"`
+	Updated string     `xml:"updated"`
+	Published string   `xml:"published"`
+}
+
+type atomLink struct {
+	Href string `xml:"href,attr"`
+	Rel  string `xml:"rel,attr"`
+	Type string `xml:"type,attr"`
+}
+
 type mediaURL struct {
 	URL string `xml:"url,attr"`
 }
@@ -131,7 +151,14 @@ func main() {
 	_ = godotenv.Load()
 
 	cfg := loadConfig()
-	client := &http.Client{Timeout: cfg.HTTPTimeout}
+	// Create HTTP client with custom transport that respects NO_PROXY
+	transport := &http.Transport{
+		Proxy: http.ProxyFromEnvironment,
+	}
+	client := &http.Client{
+		Timeout:   cfg.HTTPTimeout,
+		Transport: transport,
+	}
 
 	// Start as daemon: run continuously with a default check interval
 	// Use environment variable to control the interval (in seconds), default to 3600 (1 hour)
@@ -421,12 +448,26 @@ func postFeedFetchStatus(client *http.Client, cfg workerConfig, result feedFetch
 
 func parseRSS(xmlData []byte, feedID int) ([]IngestArticle, error) {
 	var doc rssDocument
-	if err := xml.Unmarshal(xmlData, &doc); err != nil {
-		return nil, err
+	if err := xml.Unmarshal(xmlData, &doc); err == nil && len(doc.Channel.Items) > 0 {
+		return parseRSSItems(doc.Channel.Items, feedID), nil
 	}
 
-	articles := make([]IngestArticle, 0, len(doc.Channel.Items))
-	for _, item := range doc.Channel.Items {
+	var atom atomFeed
+	if err := xml.Unmarshal(xmlData, &atom); err == nil && len(atom.Entries) > 0 {
+		return parseAtomEntries(atom.Entries, feedID), nil
+	}
+
+	// Retry RSS unmarshal to get the error
+	var doc2 rssDocument
+	if err := xml.Unmarshal(xmlData, &doc2); err != nil {
+		return nil, err
+	}
+	return parseRSSItems(doc2.Channel.Items, feedID), nil
+}
+
+func parseRSSItems(items []rssItem, feedID int) []IngestArticle {
+	articles := make([]IngestArticle, 0, len(items))
+	for _, item := range items {
 		title := strings.TrimSpace(item.Title)
 		link := strings.TrimSpace(item.Link)
 		guid := strings.TrimSpace(item.GUID)
@@ -452,8 +493,62 @@ func parseRSS(xmlData []byte, feedID int) ([]IngestArticle, error) {
 
 		articles = append(articles, article)
 	}
+	return articles
+}
 
-	return articles, nil
+func parseAtomEntries(entries []atomEntry, feedID int) []IngestArticle {
+	articles := make([]IngestArticle, 0, len(entries))
+	for _, entry := range entries {
+		title := strings.TrimSpace(entry.Title)
+		link := atomEntryLink(entry)
+		if title == "" || link == "" {
+			continue
+		}
+
+		summary := strings.TrimSpace(entry.Summary)
+		content := strings.TrimSpace(entry.Content)
+
+		article := IngestArticle{
+			FeedID:  &feedID,
+			Title:   title,
+			Link:    link,
+			GUID:    strings.TrimSpace(entry.ID),
+			Summary: summary,
+			Content: content,
+		}
+
+		pubDate := entry.Published
+		if pubDate == "" {
+			pubDate = entry.Updated
+		}
+		if parsedTime, ok := parsePubDate(pubDate); ok {
+			formatted := parsedTime.UTC().Format(time.RFC3339)
+			article.PublishedAt = &formatted
+		}
+
+		if content != "" {
+			if m := imgSrcRe.FindStringSubmatch(content); len(m) > 1 {
+				article.ImageURL = strings.TrimSpace(m[1])
+			}
+		}
+
+		articles = append(articles, article)
+	}
+	return articles
+}
+
+func atomEntryLink(entry atomEntry) string {
+	for _, l := range entry.Links {
+		if l.Rel == "" || l.Rel == "alternate" {
+			if u := strings.TrimSpace(l.Href); u != "" {
+				return u
+			}
+		}
+	}
+	if len(entry.Links) > 0 {
+		return strings.TrimSpace(entry.Links[0].Href)
+	}
+	return ""
 }
 
 func parsePubDate(value string) (time.Time, bool) {

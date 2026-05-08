@@ -6,6 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Feedee{% endblock %}</title>
     <meta name="csrf-token" content="{{ csrf_token }}">
+    <link rel="icon" type="image/svg+xml" href="{% static 'favicon.svg' %}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{% static 'favicon.svg' %}">
+    <link rel="apple-touch-icon" href="{% static 'favicon.svg' %}">
     {% include "includes/_theme_head.html" %}
     {% vite_assets "js/main.js" %}
     <link rel="stylesheet" href="{% static 'css/article-prose.css' %}">
@@ -127,6 +130,12 @@
             <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/></svg>
             Read later
             {% if sidebar_total_bookmarks_read_later %}<span class="ml-auto text-xs font-medium text-sky-600 bg-sky-50 rounded-full px-2 py-0.5">{{ sidebar_total_bookmarks_read_later }}</span>{% endif %}
+        </a>
+        <a href="{% url 'bookmarks-page' %}?flag=favorite"
+           class="sidebar-link flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-gray-700 {% if request.GET.flag == 'favorite' %}active{% endif %}">
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+            Favorites
+            {% if sidebar_total_bookmarks_favorite %}<span class="ml-auto text-xs font-medium text-rose-600 bg-rose-50 rounded-full px-2 py-0.5">{{ sidebar_total_bookmarks_favorite }}</span>{% endif %}
         </a>
 
         <div class="border-t border-gray-100 mt-3 pt-3">

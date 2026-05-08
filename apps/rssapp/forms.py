@@ -47,6 +47,13 @@ class FeedCreateForm(forms.ModelForm):
         if not feed_url:
             error_msg = self.discovery_error_detail or "Could not find an RSS or Atom feed at that URL."
             raise forms.ValidationError(error_msg)
+
+        # Check if this feed URL already exists
+        if Feed.objects.filter(url=feed_url).exists():
+            raise forms.ValidationError(
+                f"This feed is already subscribed. The discovered feed URL ({feed_url}) is already in your feed list."
+            )
+
         return feed_url
 
     def clean(self):
@@ -112,11 +119,8 @@ class TagForm(forms.ModelForm):
             "name": forms.TextInput(
                 attrs={"class": _INPUT_CLASS, "placeholder": "Tag name"}
             ),
-            "color": forms.TextInput(
-                attrs={
-                    "class": "h-9 w-14 rounded-lg border border-gray-200 cursor-pointer",
-                    "type": "color",
-                }
+            "color": forms.HiddenInput(
+                attrs={"x-model": "selectedColor"}
             ),
         }
 
@@ -170,7 +174,7 @@ class BookmarkForm(forms.ModelForm):
 class BookmarkCategoryForm(forms.ModelForm):
     class Meta:
         model = BookmarkCategory
-        fields = ["name", "description", "color"]
+        fields = ["name", "description", "color", "parent"]
         widgets = {
             "name": forms.TextInput(
                 attrs={"class": _INPUT_CLASS, "placeholder": "Category name"}
@@ -182,13 +186,30 @@ class BookmarkCategoryForm(forms.ModelForm):
                     "rows": 2,
                 }
             ),
-            "color": forms.TextInput(
-                attrs={
-                    "class": "h-9 w-14 rounded-lg border border-gray-200 cursor-pointer",
-                    "type": "color",
-                }
+            "color": forms.HiddenInput(
+                attrs={"x-model": "selectedColor"}
+            ),
+            "parent": forms.Select(
+                attrs={"class": _INPUT_CLASS}
             ),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["parent"].required = False
+        self.fields["parent"].empty_label = "None (Top level)"
+        # Exclude self and descendants from parent choices to prevent circular references
+        if self.instance.pk:
+            def get_descendants(cat):
+                descendants = []
+                for child in BookmarkCategory.objects.filter(parent=cat):
+                    descendants.append(child.pk)
+                    descendants.extend(get_descendants(child))
+                return descendants
+            exclude_ids = [self.instance.pk] + get_descendants(self.instance)
+            self.fields["parent"].queryset = BookmarkCategory.objects.filter(
+                user=self.instance.user
+            ).exclude(pk__in=exclude_ids)
 
 
 class UserProfileForm(forms.ModelForm):
